@@ -29,22 +29,25 @@ const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
   : [];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Permitir requests sin 'origin' (como Postman, apps móviles) solo si no hay orígenes definidos
-    if (!origin && allowedOrigins.length === 0) {
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permitir requests sin 'origin' (como Postman, apps móviles) solo si no hay orígenes definidos
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.includes('*')
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Rate Limiting general
 const limiter = rateLimit({
@@ -59,7 +62,9 @@ const limiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 10, // Max 10 intentos por IP cada 15 min
-  message: { error: 'Too many authentication attempts, please try again later.' },
+  message: {
+    error: 'Too many authentication attempts, please try again later.',
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -74,10 +79,10 @@ app.use('/api/goals', goalRoutes); // Usar rutas de metas
 
 // Ruta de health check
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
 
@@ -92,10 +97,10 @@ app.use((err, req, res, next) => {
 
   // No exponer detalles del error en producción
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   res.status(err.status || 500).json({
     error: err.message || 'An unexpected error occurred',
-    ...(isProduction ? {} : { stack: err.stack })
+    ...(isProduction ? {} : { stack: err.stack }),
   });
 });
 
