@@ -1,0 +1,14 @@
+# Node
+node_modules/
+.env
+npm-debug.log
+
+# Docker volumes
+postgres_data/
+
+# VS Code settings
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
