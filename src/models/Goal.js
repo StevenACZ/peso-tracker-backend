@@ -18,6 +18,13 @@ class Goal {
   }
 
   static async update(id, userId, { target_weight, target_date }) {
+    console.log('Model update - received values:', { id, userId, target_weight, target_date });
+    
+    // Ensure target_weight is not null
+    if (target_weight === null || target_weight === undefined) {
+      throw new Error('target_weight cannot be null or undefined');
+    }
+    
     const result = await pool.query(
       'UPDATE goals SET target_weight = $1, target_date = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
       [target_weight, target_date, id, userId]

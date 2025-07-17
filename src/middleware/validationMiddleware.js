@@ -77,3 +77,30 @@ export const validateGetWeights = [
   query('endDate').optional().isISO8601(),
   handleValidationErrors
 ];
+
+// Validaciones para metas
+export const validateAddGoal = [
+  body('target_weight')
+    .notEmpty().withMessage('Target weight is required')
+    .isFloat({ min: 1, max: 1000 }).withMessage('Target weight must be a number between 1 and 1000'),
+  body('target_date')
+    .optional()
+    .isISO8601().withMessage('Target date must be in YYYY-MM-DD format'),
+  handleValidationErrors
+];
+
+export const validateUpdateGoal = [
+  param('id').isInt({ min: 1 }).withMessage('Invalid ID'),
+  body('target_weight')
+    .notEmpty().withMessage('Target weight is required')
+    .isFloat({ min: 1, max: 1000 }).withMessage('Target weight must be a number between 1 and 1000'),
+  body('target_date')
+    .optional()
+    .isISO8601().withMessage('Target date must be in YYYY-MM-DD format'),
+  handleValidationErrors
+];
+
+export const validateDeleteGoal = [
+  param('id').isInt({ min: 1 }).withMessage('Invalid ID'),
+  handleValidationErrors
+];
