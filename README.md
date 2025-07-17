@@ -24,22 +24,22 @@
 
 ## 🧱 Stack Tecnológico
 
-| Componente      | Tecnología                                                                                         |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| **Backend**     | [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)                                |
-| **Base de Datos** | [PostgreSQL](https://www.postgresql.org/)                                                          |
-| **Autenticación** | [JSON Web Token (JWT)](https://jwt.io/), [bcrypt.js](https://github.com/kelektiv/bcrypt.js)       |
-| **Contenedores**  | [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)               |
-| **Seguridad**   | [Helmet](https://helmetjs.github.io/), [CORS](https://expressjs.com/en/resources/middleware/cors.html), [express-rate-limit](https://github.com/nfriedly/express-rate-limit) |
-| **Validación**  | [express-validator](https://express-validator.github.io/docs/)                                     |
-| **Otros**       | [pgAdmin](https://www.pgadmin.org/), [Morgan](https://github.com/expressjs/morgan) (Logger)           |
-
+| Componente        | Tecnología                                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**       | [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)                                                                                                         |
+| **Base de Datos** | [PostgreSQL](https://www.postgresql.org/)                                                                                                                                    |
+| **Autenticación** | [JSON Web Token (JWT)](https://jwt.io/), [bcrypt.js](https://github.com/kelektiv/bcrypt.js)                                                                                  |
+| **Contenedores**  | [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)                                                                                        |
+| **Seguridad**     | [Helmet](https://helmetjs.github.io/), [CORS](https://expressjs.com/en/resources/middleware/cors.html), [express-rate-limit](https://github.com/nfriedly/express-rate-limit) |
+| **Validación**    | [express-validator](https://express-validator.github.io/docs/)                                                                                                               |
+| **Otros**         | [pgAdmin](https://www.pgadmin.org/), [Morgan](https://github.com/expressjs/morgan) (Logger)                                                                                  |
 
 ## 🚀 Cómo Empezar
 
 Asegúrate de tener **Git** y **Docker** instalados en tu sistema.
 
 1.  **Clona el repositorio:**
+
     ```bash
     git clone https://github.com/TU_USUARIO/peso-tracker-backend.git
     cd peso-tracker-backend
@@ -47,13 +47,16 @@ Asegúrate de tener **Git** y **Docker** instalados en tu sistema.
 
 2.  **Configura tus variables de entorno:**
     Copia el archivo de ejemplo y edítalo con tus propias credenciales.
+
     ```bash
     cp .env.example .env
     ```
+
     Abre el archivo `.env` y rellena las variables (especialmente las contraseñas y el `JWT_SECRET`).
 
 3.  **Levanta los servicios con Docker Compose:**
     Este comando construirá la imagen de Node.js y levantará todos los contenedores en segundo plano.
+
     ```bash
     docker compose up --build -d
     ```
@@ -64,7 +67,7 @@ Asegúrate de tener **Git** y **Docker** instalados en tu sistema.
 
 ## 📡 Documentación de la API (Endpoints)
 
-A continuación se detallan los endpoints disponibles.
+A continuación se detallan todos los endpoints disponibles con ejemplos de peticiones y respuestas.
 
 > **Nota**: Las rutas que indican `🔒 Protegido` requieren un Token JWT en la cabecera `Authorization`.
 >
@@ -76,13 +79,18 @@ A continuación se detallan los endpoints disponibles.
 
 Para verificar que la API está funcionando correctamente.
 
-`GET /health`
+**`GET /health`**
+
+```bash
+curl -X GET http://localhost:3000/health
+```
+
+**Respuesta Exitosa (200 OK):**
 
 ```json
-// ✅ Respuesta Exitosa (200 OK)
 {
   "status": "OK",
-  "timestamp": "2024-05-21T10:00:00.000Z",
+  "timestamp": "2025-07-17T10:00:00.000Z",
   "uptime": 120.5
 }
 ```
@@ -92,9 +100,11 @@ Para verificar que la API está funcionando correctamente.
 ### 👤 Autenticación (`/api/auth`)
 
 #### Registro de Usuario
-`POST /api/auth/register`
+
+**`POST /api/auth/register`**
 
 **Ejemplo de Petición:**
+
 ```bash
 curl -X POST http://localhost:3000/api/auth/register \
 -H "Content-Type: application/json" \
@@ -104,18 +114,41 @@ curl -X POST http://localhost:3000/api/auth/register \
   "password": "Password123!"
 }'
 ```
+
 **Respuesta Exitosa (201 CREATED):**
+
 ```json
 {
   "message": "User registered successfully",
-  "user": { "id": 1, "username": "steven", "email": "steven@example.com" }
+  "user": {
+    "id": 1,
+    "username": "steven",
+    "email": "steven@example.com"
+  }
+}
+```
+
+**Errores de Validación (400 BAD REQUEST):**
+
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    {
+      "msg": "Password must contain at least one lowercase letter, one uppercase letter, and one number",
+      "param": "password",
+      "location": "body"
+    }
+  ]
 }
 ```
 
 #### Inicio de Sesión
-`POST /api/auth/login`
+
+**`POST /api/auth/login`**
 
 **Ejemplo de Petición:**
+
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
 -H "Content-Type: application/json" \
@@ -124,12 +157,26 @@ curl -X POST http://localhost:3000/api/auth/login \
   "password": "Password123!"
 }'
 ```
+
 **Respuesta Exitosa (200 OK):**
+
 ```json
 {
   "message": "Login successful",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": { "id": 1, "username": "steven", "email": "steven@example.com" }
+  "user": {
+    "id": 1,
+    "username": "steven",
+    "email": "steven@example.com"
+  }
+}
+```
+
+**Error de Credenciales (401 UNAUTHORIZED):**
+
+```json
+{
+  "error": "Invalid credentials"
 }
 ```
 
@@ -137,56 +184,264 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ### ⚖️ Registros de Peso (`/api/weights`)
 
-#### `GET /api/weights` 🔒 Protegido
-Obtiene todos los registros de peso del usuario.
+#### Obtener Registros de Peso
 
-#### `POST /api/weights` 🔒 Protegido
-Añade un nuevo registro de peso.
+**`GET /api/weights` 🔒 Protegido**
+
+Obtiene todos los registros de peso del usuario autenticado.
+
+**Parámetros de consulta opcionales:**
+
+- `limit`: Número máximo de registros (1-100)
+- `offset`: Número de registros a omitir
+- `startDate`: Fecha de inicio (YYYY-MM-DD)
+- `endDate`: Fecha de fin (YYYY-MM-DD)
 
 **Ejemplo de Petición:**
+
+```bash
+curl -X GET "http://localhost:3000/api/weights?limit=10&startDate=2025-01-01" \
+-H "Authorization: Bearer <tu-token-jwt>"
+```
+
+**Respuesta Exitosa (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "weight": 80.5,
+      "date": "2025-07-17",
+      "notes": "Después del entrenamiento",
+      "created_at": "2025-07-17T10:00:00.000Z",
+      "updated_at": "2025-07-17T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Agregar Registro de Peso
+
+**`POST /api/weights` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
 ```bash
 curl -X POST http://localhost:3000/api/weights \
--H "Authorization: Bearer <token>" \
+-H "Authorization: Bearer <tu-token-jwt>" \
 -H "Content-Type: application/json" \
 -d '{
   "weight": 80.5,
-  "date": "2024-05-21",
-  "notes": "Primera medición"
+  "date": "2025-07-17",
+  "notes": "Después del entrenamiento"
 }'
 ```
 
-#### `PUT /api/weights/:id` 🔒 Protegido
-Actualiza un registro de peso existente.
+**Respuesta Exitosa (201 CREATED):**
 
-#### `DELETE /api/weights/:id` 🔒 Protegido
-Elimina un registro de peso.
+```json
+{
+  "message": "Weight record created successfully",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "weight": 80.5,
+    "date": "2025-07-17",
+    "notes": "Después del entrenamiento",
+    "created_at": "2025-07-17T10:00:00.000Z",
+    "updated_at": "2025-07-17T10:00:00.000Z"
+  }
+}
+```
+
+#### Actualizar Registro de Peso
+
+**`PUT /api/weights/:id` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
+```bash
+curl -X PUT http://localhost:3000/api/weights/1 \
+-H "Authorization: Bearer <tu-token-jwt>" \
+-H "Content-Type: application/json" \
+-d '{
+  "weight": 79.8,
+  "date": "2025-07-17",
+  "notes": "Actualizado: después del entrenamiento"
+}'
+```
+
+**Respuesta Exitosa (200 OK):**
+
+```json
+{
+  "message": "Weight record updated successfully",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "weight": 79.8,
+    "date": "2025-07-17",
+    "notes": "Actualizado: después del entrenamiento",
+    "created_at": "2025-07-17T10:00:00.000Z",
+    "updated_at": "2025-07-17T10:30:00.000Z"
+  }
+}
+```
+
+#### Eliminar Registro de Peso
+
+**`DELETE /api/weights/:id` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
+```bash
+curl -X DELETE http://localhost:3000/api/weights/1 \
+-H "Authorization: Bearer <tu-token-jwt>"
+```
+
+**Respuesta Exitosa (204 NO CONTENT):**
+
+```
+(Sin contenido)
+```
 
 ---
 
 ### 🎯 Metas de Peso (`/api/goals`)
 
-#### `GET /api/goals` 🔒 Protegido
-Obtiene las metas de peso del usuario.
+#### Obtener Metas
 
-#### `POST /api/goals` 🔒 Protegido
-Crea una nueva meta de peso.
+**`GET /api/goals` 🔒 Protegido**
+
+Obtiene todas las metas del usuario autenticado.
 
 **Ejemplo de Petición:**
+
+```bash
+curl -X GET http://localhost:3000/api/goals \
+-H "Authorization: Bearer <tu-token-jwt>"
+```
+
+**Respuesta Exitosa (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "target_weight": 75.0,
+      "target_date": "2025-12-31",
+      "created_at": "2025-07-17T10:00:00.000Z",
+      "updated_at": "2025-07-17T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Crear Meta
+
+**`POST /api/goals` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
 ```bash
 curl -X POST http://localhost:3000/api/goals \
--H "Authorization: Bearer <token>" \
+-H "Authorization: Bearer <tu-token-jwt>" \
 -H "Content-Type: application/json" \
 -d '{
   "target_weight": 75.0,
-  "target_date": "2024-12-31"
+  "target_date": "2025-12-31"
 }'
 ```
 
-#### `PUT /api/goals/:id` 🔒 Protegido
-Actualiza una meta de peso existente.
+**Respuesta Exitosa (201 CREATED):**
 
-#### `DELETE /api/goals/:id` 🔒 Protegido
-Elimina una meta de peso.
+```json
+{
+  "message": "Goal created successfully",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "target_weight": 75.0,
+    "target_date": "2025-12-31",
+    "created_at": "2025-07-17T10:00:00.000Z",
+    "updated_at": "2025-07-17T10:00:00.000Z"
+  }
+}
+```
+
+#### Actualizar Meta
+
+**`PUT /api/goals/:id` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
+```bash
+curl -X PUT http://localhost:3000/api/goals/1 \
+-H "Authorization: Bearer <tu-token-jwt>" \
+-H "Content-Type: application/json" \
+-d '{
+  "target_weight": 70.0,
+  "target_date": "2025-11-30"
+}'
+```
+
+**Respuesta Exitosa (200 OK):**
+
+```json
+{
+  "message": "Goal updated successfully",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "target_weight": 70.0,
+    "target_date": "2025-11-30",
+    "created_at": "2025-07-17T10:00:00.000Z",
+    "updated_at": "2025-07-17T10:30:00.000Z"
+  }
+}
+```
+
+#### Eliminar Meta
+
+**`DELETE /api/goals/:id` 🔒 Protegido**
+
+**Ejemplo de Petición:**
+
+```bash
+curl -X DELETE http://localhost:3000/api/goals/1 \
+-H "Authorization: Bearer <tu-token-jwt>"
+```
+
+**Respuesta Exitosa (204 NO CONTENT):**
+
+```
+(Sin contenido)
+```
+
+---
+
+### 🚨 Códigos de Error Comunes
+
+| Código  | Descripción                                | Ejemplo                                         |
+| ------- | ------------------------------------------ | ----------------------------------------------- |
+| **400** | Bad Request - Datos inválidos              | Validación fallida, campos requeridos faltantes |
+| **401** | Unauthorized - No autenticado              | Token JWT faltante o inválido                   |
+| **403** | Forbidden - Sin permisos                   | Intentar acceder a recursos de otro usuario     |
+| **404** | Not Found - Recurso no encontrado          | ID de registro o meta inexistente               |
+| **429** | Too Many Requests - Rate limit excedido    | Demasiadas peticiones en poco tiempo            |
+| **500** | Internal Server Error - Error del servidor | Error interno de la aplicación                  |
+
+### 📝 Notas Importantes
+
+1. **Autenticación**: Todos los endpoints protegidos requieren el token JWT obtenido en el login.
+2. **Validación**: Los datos son validados automáticamente. Revisa los mensajes de error para corregir los datos.
+3. **Rate Limiting**: La API tiene límites de peticiones para prevenir abuso.
+4. **Fechas**: Usa el formato ISO 8601 (YYYY-MM-DD) para todas las fechas.
+5. **Pesos**: Los pesos deben estar entre 20 y 500 kg.
 
 ## 🗂️ Estructura del Proyecto
 
