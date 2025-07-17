@@ -69,6 +69,35 @@ export const validateWeightUpdate = [
     .withMessage('Notes must not exceed 500 characters'),
 ];
 
+// Validación para actualización de metas
+export const validateGoalUpdate = [
+  body('target_weight')
+    .optional()
+    .isFloat({ min: 20, max: 500 })
+    .withMessage('Target weight must be between 20 and 500 kg'),
+
+  body('current_weight')
+    .optional()
+    .isFloat({ min: 20, max: 500 })
+    .withMessage('Current weight must be between 20 and 500 kg'),
+
+  body('target_date')
+    .optional()
+    .isISO8601()
+    .toDate()
+    .withMessage('Please provide a valid target date'),
+
+  body('notes')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Notes must not exceed 500 characters'),
+
+  body('is_active')
+    .optional()
+    .isBoolean()
+    .withMessage('is_active must be a boolean'),
+];
+
 // Validación para metas
 export const validateGoal = [
   body('target_weight')
