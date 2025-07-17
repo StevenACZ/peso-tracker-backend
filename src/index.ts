@@ -1,12 +1,13 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import weightRoutes from './routes/weights.js';
-import goalRoutes from './routes/goals.js'; // Importar rutas de metas
+import goalRoutes from './routes/goals.js';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import cors from 'cors';
-import morgan from 'morgan'; // Para logging de requests
+import morgan from 'morgan';
+import { ErrorResponse } from './types/index.js';
 
 dotenv.config();
 
@@ -75,10 +76,10 @@ app.use('/api/auth', authLimiter);
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/weights', weightRoutes);
-app.use('/api/goals', goalRoutes); // Usar rutas de metas
+app.use('/api/goals', goalRoutes);
 
 // Ruta de health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -87,21 +88,23 @@ app.get('/health', (req, res) => {
 });
 
 // Middleware para manejar rutas no encontradas (404)
-app.use((req, res, next) => {
+app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'The requested resource was not found' });
 });
 
 // Middleware centralizado para manejo de errores
-app.use((err, req, res, next) => {
-  console.error(err); // Log del error completo en el servidor
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err);
 
   // No exponer detalles del error en producción
   const isProduction = process.env.NODE_ENV === 'production';
 
-  res.status(err.status || 500).json({
+  const errorResponse: ErrorResponse = {
     error: err.message || 'An unexpected error occurred',
     ...(isProduction ? {} : { stack: err.stack }),
-  });
+  };
+
+  res.status(500).json(errorResponse);
 });
 
 const PORT = process.env.PORT || 3000;
@@ -115,7 +118,6 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   server.close(() => {
     console.log('HTTP server closed');
-    // Aquí se podría cerrar la conexión a la DB si es necesario
     process.exit(0);
   });
 });
