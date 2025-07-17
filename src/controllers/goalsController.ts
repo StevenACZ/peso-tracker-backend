@@ -1,6 +1,6 @@
-import { Response, NextFunction } from 'express';
-import Goal from '../models/Goal.js';
-import { AuthRequest, ApiResponse, Goal as GoalType } from '../types/index.js';
+import { Response, NextFunction } from "express";
+import Goal from "../models/Goal.js";
+import { AuthRequest, ApiResponse, Goal as GoalType } from "../types/index.js";
 
 const getGoals = async (
   req: AuthRequest,
@@ -22,18 +22,12 @@ const addGoal = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { target_weight, current_weight, target_date, notes } = req.body;
+    const { target_weight, target_date } = req.body;
 
-    const newGoal = await Goal.create(
-      req.user!.id,
-      target_weight,
-      current_weight,
-      target_date,
-      notes
-    );
+    const newGoal = await Goal.create(req.user!.id, target_weight, target_date);
 
     const response: ApiResponse<GoalType> = {
-      message: 'Goal created successfully',
+      message: "Goal created successfully",
       data: newGoal,
     };
 
@@ -50,19 +44,15 @@ const updateGoal = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { target_weight, current_weight, target_date, notes, is_active } =
-      req.body;
+    const { target_weight, target_date } = req.body;
 
     const updatedGoal = await Goal.update(parseInt(id!), req.user!.id, {
       target_weight,
-      current_weight,
       target_date,
-      notes,
-      is_active,
     });
 
     const response: ApiResponse<GoalType> = {
-      message: 'Goal updated successfully',
+      message: "Goal updated successfully",
       data: updatedGoal,
     };
 
