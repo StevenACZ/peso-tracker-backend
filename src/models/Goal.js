@@ -17,10 +17,10 @@ class Goal {
     return result.rows[0];
   }
 
-  static async update(id, userId, { targetWeight, targetDate }) {
+  static async update(id, userId, { target_weight, target_date }) {
     const result = await pool.query(
       'UPDATE goals SET target_weight = $1, target_date = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
-      [targetWeight, targetDate, id, userId]
+      [target_weight, target_date, id, userId]
     );
     if (result.rowCount === 0) {
       throw new Error('Goal not found or user not authorized');
