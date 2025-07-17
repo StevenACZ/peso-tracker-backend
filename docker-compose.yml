@@ -11,10 +11,10 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Volumen persistente para evitar que se borren los datos
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  # Inicialización de la DB
+      - postgres_data:/var/lib/postgresql/data # Volumen persistente para evitar que se borren los datos
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql # Inicialización de la DB
     networks:
       - peso-network
     restart: unless-stopped
@@ -33,14 +33,14 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${PORT}
-    command: npm run dev  # Usamos "npm run dev" para iniciar con nodemon en modo desarrollo
+    command: npm run start # Usamos "npm run start" para iniciar la aplicación compilada
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - postgres
     volumes:
-      - ./src:/app/src  # Mantiene sincronizada la carpeta src entre host y contenedor
-      - /app/node_modules  # Para evitar conflictos con node_modules
+      - ./src:/app/src # Mantiene sincronizada la carpeta src entre host y contenedor
+      - /app/node_modules # Para evitar conflictos con node_modules
     networks:
       - peso-network
     restart: unless-stopped
@@ -52,7 +52,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@pesotracker.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
-      - "5050:80"
+      - '5050:80'
     depends_on:
       - postgres
     networks:
@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:  # Volumen persistente para la base de datos
+  postgres_data: # Volumen persistente para la base de datos
 
 networks:
   peso-network:
