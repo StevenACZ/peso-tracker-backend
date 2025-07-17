@@ -7,22 +7,22 @@ class WeightRecord {
 
     if (startDate) {
       queryParams.push(startDate);
-      queryString += ` AND date >= ${queryParams.length}`;
+      queryString += ` AND date >= $${queryParams.length}`;
     }
 
     if (endDate) {
       queryParams.push(endDate);
-      queryString += ` AND date <= ${queryParams.length}`;
+      queryString += ` AND date <= $${queryParams.length}`;
     }
 
     queryString += ' ORDER BY date DESC';
 
-    // Añadir LIMIT y OFFSET de forma segura
+    // Asegurar que LIMIT y OFFSET sean pasados correctamente
     queryParams.push(limit);
-    queryString += ` LIMIT ${queryParams.length}`;
+    queryString += ` LIMIT $${queryParams.length}`;
 
     queryParams.push(offset);
-    queryString += ` OFFSET ${queryParams.length}`;
+    queryString += ` OFFSET $${queryParams.length}`;
 
     const result = await pool.query(queryString, queryParams);
     return result.rows;
@@ -34,16 +34,16 @@ class WeightRecord {
 
     if (startDate) {
       queryParams.push(startDate);
-      queryString += ` AND date >= ${queryParams.length}`;
+      queryString += ` AND date >= $${queryParams.length}`;
     }
 
     if (endDate) {
       queryParams.push(endDate);
-      queryString += ` AND date <= ${queryParams.length}`;
+      queryString += ` AND date <= $${queryParams.length}`;
     }
 
     const result = await pool.query(queryString, queryParams);
-    return parseInt(result.rows[0].count, 10);
+    return result.rows[0].count;
   }
 
   static async create(userId, weight, date, notes) {
