@@ -20,14 +20,14 @@ class Goal {
 
   static async create(
     userId: number,
-    targetWeight: number,
-    currentWeight: number,
-    targetDate: string,
+    target_weight: number,
+    current_weight: number,
+    target_date: string,
     notes?: string
   ): Promise<GoalType> {
     const result = await pool.query(
       'INSERT INTO goals (user_id, target_weight, current_weight, target_date, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [userId, targetWeight, currentWeight, targetDate, notes || null]
+      [userId, target_weight, current_weight, target_date, notes || null]
     );
     return result.rows[0];
   }
@@ -36,39 +36,39 @@ class Goal {
     id: number,
     userId: number,
     {
-      targetWeight,
-      currentWeight,
-      targetDate,
+      target_weight,
+      current_weight,
+      target_date,
       notes,
-      isActive,
+      is_active,
     }: {
-      targetWeight?: number;
-      currentWeight?: number;
-      targetDate?: string;
+      target_weight?: number;
+      current_weight?: number;
+      target_date?: string;
       notes?: string;
-      isActive?: boolean;
+      is_active?: boolean;
     }
   ): Promise<GoalType> {
     const fields: string[] = [];
     const values: (string | number | boolean)[] = [];
     let paramCount = 0;
 
-    if (targetWeight !== undefined) {
+    if (target_weight !== undefined) {
       paramCount++;
       fields.push(`target_weight = $${paramCount}`);
-      values.push(targetWeight);
+      values.push(target_weight);
     }
 
-    if (currentWeight !== undefined) {
+    if (current_weight !== undefined) {
       paramCount++;
       fields.push(`current_weight = $${paramCount}`);
-      values.push(currentWeight);
+      values.push(current_weight);
     }
 
-    if (targetDate !== undefined) {
+    if (target_date !== undefined) {
       paramCount++;
       fields.push(`target_date = $${paramCount}`);
-      values.push(targetDate);
+      values.push(target_date);
     }
 
     if (notes !== undefined) {
@@ -77,10 +77,10 @@ class Goal {
       values.push(notes);
     }
 
-    if (isActive !== undefined) {
+    if (is_active !== undefined) {
       paramCount++;
       fields.push(`is_active = $${paramCount}`);
-      values.push(isActive);
+      values.push(is_active);
     }
 
     if (fields.length === 0) {

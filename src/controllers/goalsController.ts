@@ -22,13 +22,13 @@ const addGoal = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { targetWeight, currentWeight, targetDate, notes } = req.body;
+    const { target_weight, current_weight, target_date, notes } = req.body;
 
     const newGoal = await Goal.create(
       req.user!.id,
-      targetWeight,
-      currentWeight,
-      targetDate,
+      target_weight,
+      current_weight,
+      target_date,
       notes
     );
 
@@ -50,15 +50,15 @@ const updateGoal = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { targetWeight, currentWeight, targetDate, notes, isActive } =
+    const { target_weight, current_weight, target_date, notes, is_active } =
       req.body;
 
     const updatedGoal = await Goal.update(parseInt(id!), req.user!.id, {
-      targetWeight,
-      currentWeight,
-      targetDate,
+      target_weight,
+      current_weight,
+      target_date,
       notes,
-      isActive,
+      is_active,
     });
 
     const response: ApiResponse<GoalType> = {

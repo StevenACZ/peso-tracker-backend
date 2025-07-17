@@ -71,15 +71,15 @@ export const validateWeightUpdate = [
 
 // Validación para metas
 export const validateGoal = [
-  body('targetWeight')
+  body('target_weight')
     .isFloat({ min: 20, max: 500 })
     .withMessage('Target weight must be between 20 and 500 kg'),
 
-  body('currentWeight')
+  body('current_weight')
     .isFloat({ min: 20, max: 500 })
     .withMessage('Current weight must be between 20 and 500 kg'),
 
-  body('targetDate')
+  body('target_date')
     .isISO8601()
     .toDate()
     .withMessage('Please provide a valid target date'),
