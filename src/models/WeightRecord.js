@@ -2,41 +2,47 @@ import pool from '../config/db.js';
 
 class WeightRecord {
   static async findByUserId(userId, { limit, offset, startDate, endDate }) {
-    let query = 'SELECT * FROM weight_records WHERE user_id = $1';
-    const params = [userId];
-    let paramIndex = 2;
+    const queryParams = [userId];
+    let queryString = 'SELECT * FROM weight_records WHERE user_id = $1';
 
     if (startDate) {
-      query += ` AND date >= ${paramIndex++}`;
-      params.push(startDate);
+      queryParams.push(startDate);
+      queryString += ` AND date >= ${queryParams.length}`;
     }
+
     if (endDate) {
-      query += ` AND date <= ${paramIndex++}`;
-      params.push(endDate);
+      queryParams.push(endDate);
+      queryString += ` AND date <= ${queryParams.length}`;
     }
 
-    query += ` ORDER BY date DESC LIMIT ${paramIndex++} OFFSET ${paramIndex++}`;
-    params.push(limit, offset);
+    queryString += ' ORDER BY date DESC';
 
-    const result = await pool.query(query, params);
+    // Añadir LIMIT y OFFSET de forma segura
+    queryParams.push(limit);
+    queryString += ` LIMIT ${queryParams.length}`;
+
+    queryParams.push(offset);
+    queryString += ` OFFSET ${queryParams.length}`;
+
+    const result = await pool.query(queryString, queryParams);
     return result.rows;
   }
 
   static async countByUserId(userId, { startDate, endDate }) {
-    let query = 'SELECT COUNT(*) FROM weight_records WHERE user_id = $1';
-    const params = [userId];
-    let paramIndex = 2;
+    const queryParams = [userId];
+    let queryString = 'SELECT COUNT(*) FROM weight_records WHERE user_id = $1';
 
     if (startDate) {
-      query += ` AND date >= ${paramIndex++}`;
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ` AND date <= ${paramIndex++}`;
-      params.push(endDate);
+      queryParams.push(startDate);
+      queryString += ` AND date >= ${queryParams.length}`;
     }
 
-    const result = await pool.query(query, params);
+    if (endDate) {
+      queryParams.push(endDate);
+      queryString += ` AND date <= ${queryParams.length}`;
+    }
+
+    const result = await pool.query(queryString, queryParams);
     return parseInt(result.rows[0].count, 10);
   }
 
