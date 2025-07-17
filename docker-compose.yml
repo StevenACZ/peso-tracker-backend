@@ -13,8 +13,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - postgres_data:/var/lib/postgresql/data  # Volumen persistente para evitar que se borren los datos
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  # Inicialización de la DB
     networks:
       - peso-network
     restart: unless-stopped
@@ -33,13 +33,14 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${PORT}
-    command: node src/index.js
+    command: npm run dev  # Usamos "npm run dev" para iniciar con nodemon en modo desarrollo
     ports:
       - "3000:3000"
     depends_on:
       - postgres
     volumes:
-      - ./src:/app/src
+      - ./src:/app/src  # Mantiene sincronizada la carpeta src entre host y contenedor
+      - /app/node_modules  # Para evitar conflictos con node_modules
     networks:
       - peso-network
     restart: unless-stopped
@@ -59,7 +60,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_data:  # Volumen persistente para la base de datos
 
 networks:
   peso-network:
