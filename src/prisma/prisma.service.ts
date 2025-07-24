@@ -10,24 +10,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     super({
       log: [
-        { emit: 'event', level: 'query' },
         { emit: 'stdout', level: 'info' },
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },
       ],
-    });
-
-    // Log query events in development mode
-    if (process.env.NODE_ENV === 'development') {
-      this.$on('query', (e) => {
-        this.logger.debug(`Query: ${e.query}`);
-        this.logger.debug(`Duration: ${e.duration}ms`);
-      });
-    }
-
-    // Log errors
-    this.$on('error', (e) => {
-      this.logger.error(`Database error: ${e.message}`);
     });
   }
 
