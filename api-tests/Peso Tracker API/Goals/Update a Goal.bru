@@ -1,0 +1,35 @@
+meta {
+  name: Update a Goal
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/goals/{{id_goal}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "targetWeight": 75,
+    "targetDate": "2025-12-30T23:59:59Z",
+    "type": "main",
+    "parentGoalId": {{id_goal}},
+    "milestoneNumber": 1
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_goal", responseData.id);
+    
+    console.log("Id Goal saved:", responseData.id);
+  }
+}

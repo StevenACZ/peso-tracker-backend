@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Peso Tracker API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

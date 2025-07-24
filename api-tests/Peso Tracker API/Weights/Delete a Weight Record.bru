@@ -1,0 +1,25 @@
+meta {
+  name: Delete a Weight Record
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/weights/{{id_weight}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_weight", responseData.id);
+    
+    console.log("Id Weight saved:", responseData.id);
+  }
+}

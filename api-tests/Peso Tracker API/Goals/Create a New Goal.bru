@@ -1,0 +1,35 @@
+meta {
+  name: Create a New Goal
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/goals
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "targetWeight": 78.0,
+    "targetDate": "2025-12-31T23:59:59Z",
+    "type": "main",
+    "parentGoalId": 1,
+    "milestoneNumber": 1
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_goal", responseData.id);
+    
+    console.log("Id Goal saved:", responseData.id);
+  }
+}

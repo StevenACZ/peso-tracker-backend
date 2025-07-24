@@ -1,0 +1,25 @@
+meta {
+  name: Delete a Goal
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/goals/{{id_goal}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_goal", responseData.id);
+    
+    console.log("Id Goal saved:", responseData.id);
+  }
+}

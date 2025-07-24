@@ -1,0 +1,11 @@
+meta {
+  name: Check Application Status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}

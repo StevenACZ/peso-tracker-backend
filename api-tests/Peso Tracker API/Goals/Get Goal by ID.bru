@@ -1,0 +1,25 @@
+meta {
+  name: Get Goal by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/goals/{{id_goal}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_goal", responseData.id);
+    
+    console.log("Id Goal saved:", responseData.id);
+  }
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Update a Weight Record
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/weights/{{id_weight}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "weight": 76.0,
+    "date": "2024-07-25",
+    "notes": "Updated notes for the weight record"
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const responseData = res.getBody();
+    
+    bru.setEnvVar("id_weight", responseData.id);
+    
+    console.log("Id Weight saved:", responseData.id);
+  }
+}
