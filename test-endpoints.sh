@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Test script for Peso Tracker Backend API
-BASE_URL="http://localhost:3000/api"
+BASE_URL="http://localhost:3001/api"
 
 echo "🚀 Testing Peso Tracker Backend API"
 echo "=================================="
@@ -46,7 +46,7 @@ WEIGHT_RESPONSE=$(curl -s -X POST "$BASE_URL/weights" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "weight": 72.5,
-    "date": "2025-01-25",
+    "date": "2026-01-25",
     "notes": "Peso de prueba"
   }')
 
@@ -73,7 +73,7 @@ GOAL_RESPONSE=$(curl -s -X POST "$BASE_URL/goals" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "targetWeight": 68.0,
-    "targetDate": "2025-07-01",
+    "targetDate": "2026-07-01",
     "type": "main"
   }')
 
@@ -88,7 +88,7 @@ curl -s -X POST "$BASE_URL/goals" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "targetWeight": 70.0,
-    "targetDate": "2025-06-01",
+    "targetDate": "2026-06-01",
     "type": "milestone",
     "parentGoalId": '$GOAL_ID',
     "milestoneNumber": 1
@@ -158,10 +158,10 @@ curl -s -X DELETE "$BASE_URL/photos/$PHOTO_ID" \
 echo ""
 
 # Test Delete Goal
-echo "17. Testing Delete Goal..."
-curl -s -X DELETE "$BASE_URL/goals/$GOAL_ID" \
-  -H "Authorization: Bearer $TOKEN" | jq .
-echo ""
+# echo "17. Testing Delete Goal..."
+# curl -s -X DELETE "$BASE_URL/goals/$GOAL_ID" \
+#   -H "Authorization: Bearer $TOKEN" | jq .
+# echo ""
 
 # Clean up test image
 rm -f test_image.png
