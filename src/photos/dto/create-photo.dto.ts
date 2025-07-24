@@ -1,10 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreatePhotoDto {
   @ApiProperty({
     example: 1,
     description: 'ID del registro de peso asociado a la foto',
   })
+  @Type(() => Number)
   weightId: number;
 
   @ApiProperty({
