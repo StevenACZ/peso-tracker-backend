@@ -1,0 +1,83 @@
+# Compiled output
+/dist
+/node_modules
+/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Tests (eliminados)
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
+/prisma/migrations/
+/generated/prisma
+
+# Supabase
+.supabase/
+
+# Temporary files
+/tmp
+/temp
+.cache
+
+# Kiro specific
+/.kiro/
+.kiro-history
+.kiro-cache
+
+# Misc
+.eslintcache
+.stylelintcache
+.npm
+.yarn
+.pnp.*
+.pnpm-store/
+.history/
+.vercel
+.netlify
