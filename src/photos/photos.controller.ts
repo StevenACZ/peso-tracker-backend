@@ -1,24 +1,35 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Delete, 
-  Param, 
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
   Query,
-  UseGuards, 
+  UseGuards,
   UseInterceptors,
   UploadedFile,
   Body,
   ParseIntPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PhotosService } from './photos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreatePhotoDto } from './dto/create-photo.dto';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 
+@ApiTags('Photos')
+@ApiBearerAuth()
 @Controller('photos')
 @UseGuards(JwtAuthGuard)
 export class PhotosController {
@@ -27,8 +38,36 @@ export class PhotosController {
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('photo'))
+  @ApiOperation({ summary: 'Subir una foto' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Archivo de foto y datos asociados',
+    schema: {
+      type: 'object',
+      properties: {
+        photo: {
+          type: 'string',
+          format: 'binary',
+        },
+        weightId: {
+          type: 'integer',
+          example: 1,
+        },
+        notes: {
+          type: 'string',
+          example: 'Foto de progreso semanal',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'La foto ha sido subida exitosamente.',
+  })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
   uploadPhoto(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: number },
     @UploadedFile() file: Express.Multer.File,
     @Body() createPhotoDto: CreatePhotoDto,
   ) {
@@ -36,10 +75,34 @@ export class PhotosController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Obtener todas las fotos del usuario' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Número de página',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Número de fotos por página',
+  })
+  @ApiQuery({
+    name: 'weightId',
+    required: false,
+    type: Number,
+    description: 'Filtrar fotos por ID de registro de peso',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de fotos.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
   findAll(
-    @CurrentUser() user: any,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @CurrentUser() user: { id: number },
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
     @Query('weightId') weightId?: string,
   ) {
     const weightIdNum = weightId ? parseInt(weightId) : undefined;
@@ -47,13 +110,27 @@ export class PhotosController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
+  @ApiOperation({ summary: 'Obtener una foto por ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'La foto.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Foto no encontrada.' })
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
     return this.photosService.findOne(id, user.id);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
+  @ApiOperation({ summary: 'Eliminar una foto' })
+  @ApiResponse({
+    status: 200,
+    description: 'La foto ha sido eliminada exitosamente.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Foto no encontrada.' })
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
     return this.photosService.remove(id, user.id);
   }
 }

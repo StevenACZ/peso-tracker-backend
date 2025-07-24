@@ -1,22 +1,30 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
-  Delete, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
   UseGuards,
   ParseIntPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { GoalsService } from './goals.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 
+@ApiTags('Goals')
+@ApiBearerAuth()
 @Controller('goals')
 @UseGuards(JwtAuthGuard)
 export class GoalsController {
@@ -24,31 +32,63 @@ export class GoalsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@CurrentUser() user: any, @Body() createGoalDto: CreateGoalDto) {
+  @ApiOperation({ summary: 'Crear una nueva meta' })
+  @ApiResponse({
+    status: 201,
+    description: 'La meta ha sido creada exitosamente.',
+  })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  create(@CurrentUser() user: { id: number }, @Body() createGoalDto: CreateGoalDto) {
     // Convert and clean the DTO
     const processedDto = {
       ...createGoalDto,
       targetWeight: Number(createGoalDto.targetWeight),
-      parentGoalId: createGoalDto.parentGoalId ? Number(createGoalDto.parentGoalId) : undefined,
-      milestoneNumber: createGoalDto.milestoneNumber ? Number(createGoalDto.milestoneNumber) : undefined,
+      parentGoalId: createGoalDto.parentGoalId
+        ? Number(createGoalDto.parentGoalId)
+        : undefined,
+      milestoneNumber: createGoalDto.milestoneNumber
+        ? Number(createGoalDto.milestoneNumber)
+        : undefined,
     };
     return this.goalsService.create(user.id, processedDto);
   }
 
   @Get()
-  findAll(@CurrentUser() user: any) {
+  @ApiOperation({ summary: 'Obtener todas las metas del usuario' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de metas.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  findAll(@CurrentUser() user: { id: number }) {
     return this.goalsService.findAll(user.id);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
+  @ApiOperation({ summary: 'Obtener una meta por ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'La meta.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Meta no encontrada.' })
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
     return this.goalsService.findOne(id, user.id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar una meta' })
+  @ApiResponse({
+    status: 200,
+    description: 'La meta ha sido actualizada exitosamente.',
+  })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Meta no encontrada.' })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: number },
     @Body() updateGoalDto: UpdateGoalDto,
   ) {
     return this.goalsService.update(id, user.id, updateGoalDto);
@@ -56,6 +96,13 @@ export class GoalsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Eliminar una meta' })
+  @ApiResponse({
+    status: 200,
+    description: 'La meta ha sido eliminada exitosamente.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Meta no encontrada.' })
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.goalsService.remove(id, user.id);
   }

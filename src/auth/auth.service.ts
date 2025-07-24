@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -21,7 +26,7 @@ export class AuthService {
         email: true,
       },
     });
-    
+
     return user;
   }
 
@@ -35,10 +40,7 @@ export class AuthService {
     // Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { email },
-          { username },
-        ],
+        OR: [{ email }, { username }],
       },
     });
 
@@ -78,7 +80,7 @@ export class AuthService {
         user,
         token,
       };
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Error al crear el usuario');
     }
   }

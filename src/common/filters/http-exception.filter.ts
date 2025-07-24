@@ -24,19 +24,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-      
+      const exceptionResponse: string | object = exception.getResponse();
+
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
+        const responseObj = exceptionResponse as { message?: string; error?: string; };
         message = responseObj.message || responseObj.error || message;
         error = responseObj.error || error;
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       // Handle Prisma errors
       status = HttpStatus.BAD_REQUEST;
-      
+
       switch (exception.code) {
         case 'P2002':
           message = 'Ya existe un registro con estos datos';

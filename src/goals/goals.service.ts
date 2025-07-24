@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
@@ -8,7 +13,8 @@ export class GoalsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: number, createGoalDto: CreateGoalDto) {
-    const { targetWeight, targetDate, type, parentGoalId, milestoneNumber } = createGoalDto;
+    const { targetWeight, targetDate, type, parentGoalId, milestoneNumber } =
+      createGoalDto;
 
     // Validate target date is in the future
     const targetDateObj = new Date(targetDate);
@@ -77,20 +83,24 @@ export class GoalsService {
     }
 
     if (goal.userId !== userId) {
-      throw new ForbiddenException('No tienes permisos para acceder a esta meta');
+      throw new ForbiddenException(
+        'No tienes permisos para acceder a esta meta',
+      );
     }
 
     return goal;
   }
 
   async update(id: number, userId: number, updateGoalDto: UpdateGoalDto) {
-    const existingGoal = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     // Validate target date is in the future if provided
     if (updateGoalDto.targetDate) {
       const targetDateObj = new Date(updateGoalDto.targetDate);
       if (targetDateObj <= new Date()) {
-        throw new BadRequestException('La fecha objetivo debe ser en el futuro');
+        throw new BadRequestException(
+          'La fecha objetivo debe ser en el futuro',
+        );
       }
     }
 
@@ -109,7 +119,9 @@ export class GoalsService {
       where: { id },
       data: {
         ...updateGoalDto,
-        targetDate: updateGoalDto.targetDate ? new Date(updateGoalDto.targetDate) : undefined,
+        targetDate: updateGoalDto.targetDate
+          ? new Date(updateGoalDto.targetDate)
+          : undefined,
       },
       include: {
         parentGoal: true,
@@ -123,7 +135,7 @@ export class GoalsService {
   }
 
   async remove(id: number, userId: number) {
-    const existingGoal = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     // Check if goal has sub-goals
     const subGoalsCount = await this.prisma.goal.count({
@@ -131,7 +143,9 @@ export class GoalsService {
     });
 
     if (subGoalsCount > 0) {
-      throw new BadRequestException('No se puede eliminar una meta que tiene sub-metas');
+      throw new BadRequestException(
+        'No se puede eliminar una meta que tiene sub-metas',
+      );
     }
 
     await this.prisma.goal.delete({

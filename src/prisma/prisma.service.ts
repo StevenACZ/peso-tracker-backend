@@ -1,8 +1,16 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
   private readonly maxRetries = 5;
   private readonly initialRetryDelay = 1000; // 1 second
@@ -29,13 +37,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   /**
    * Connect to the database with exponential backoff retry strategy
    */
-  private async connectWithRetry(retryCount = 0, delay = this.initialRetryDelay): Promise<void> {
+  private async connectWithRetry(
+    retryCount = 0,
+    delay = this.initialRetryDelay,
+  ): Promise<void> {
     try {
       await this.$connect();
       this.logger.log('Successfully connected to database');
-    } catch (error) {
+    } catch (error: any) {
       if (retryCount >= this.maxRetries) {
-        this.logger.error(`Failed to connect to database after ${this.maxRetries} attempts`);
+        this.logger.error(
+          `Failed to connect to database after ${this.maxRetries} attempts`,
+        );
         throw error;
       }
 
@@ -61,15 +74,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async executeOperation<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Database operation failed: ${error.message}`);
-      
+
       // Check if it's a connection error and try to reconnect
       if (error.code === 'P1001' || error.code === 'P1002') {
-        this.logger.warn('Connection error detected, attempting to reconnect...');
+        this.logger.warn(
+          'Connection error detected, attempting to reconnect...',
+        );
         await this.connectWithRetry();
       }
-      
+
       throw error;
     }
   }

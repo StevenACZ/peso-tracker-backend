@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWeightDto } from './dto/create-weight.dto';
 import { UpdateWeightDto } from './dto/update-weight.dto';
@@ -24,19 +29,27 @@ export class WeightsService {
       });
 
       return weightRecord;
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Ya existe un registro de peso para esta fecha');
+        throw new ConflictException(
+          'Ya existe un registro de peso para esta fecha',
+        );
       }
       throw error;
     }
   }
 
-  async findAll(userId: number, page: number = 1, limit: number = 10, startDate?: string, endDate?: string) {
+  async findAll(
+    userId: number,
+    page: number = 1,
+    limit: number = 10,
+    startDate?: string,
+    endDate?: string,
+  ) {
     const skip = (page - 1) * limit;
-    
-    const where: any = { userId };
-    
+
+    const where: { userId: number; date?: { gte?: Date; lte?: Date } } = { userId };
+
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = new Date(startDate);
@@ -80,21 +93,25 @@ export class WeightsService {
     }
 
     if (weight.userId !== userId) {
-      throw new ForbiddenException('No tienes permisos para acceder a este registro');
+      throw new ForbiddenException(
+        'No tienes permisos para acceder a este registro',
+      );
     }
 
     return weight;
   }
 
   async update(id: number, userId: number, updateWeightDto: UpdateWeightDto) {
-    const existingWeight = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     try {
       const updatedWeight = await this.prisma.weight.update({
         where: { id },
         data: {
           ...updateWeightDto,
-          date: updateWeightDto.date ? new Date(updateWeightDto.date) : undefined,
+          date: updateWeightDto.date
+            ? new Date(updateWeightDto.date)
+            : undefined,
         },
         include: {
           photos: true,
@@ -102,16 +119,18 @@ export class WeightsService {
       });
 
       return updatedWeight;
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Ya existe un registro de peso para esta fecha');
+        throw new ConflictException(
+          'Ya existe un registro de peso para esta fecha',
+        );
       }
       throw error;
     }
   }
 
   async remove(id: number, userId: number) {
-    const existingWeight = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     await this.prisma.weight.delete({
       where: { id },

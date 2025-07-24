@@ -1,33 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
-  private supabase;
+  private supabase: SupabaseClient;
 
   constructor(private prisma: PrismaService) {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!
+      process.env.SUPABASE_ANON_KEY!,
     );
   }
 
   async check() {
     const timestamp = new Date().toISOString();
-    
+
     const [database, supabase] = await Promise.allSettled([
       this.checkDatabase(),
       this.checkSupabase(),
     ]);
 
-    const status = 
-      database.status === 'fulfilled' && 
-      supabase.status === 'fulfilled' && 
-      database.value.status === 'healthy' && 
+    const status =
+      database.status === 'fulfilled' &&
+      supabase.status === 'fulfilled' &&
+      database.value.status === 'healthy' &&
       supabase.value.status === 'healthy'
-        ? 'healthy' 
+        ? 'healthy'
         : 'unhealthy';
 
     return {
@@ -37,8 +37,14 @@ export class HealthService {
       environment: process.env.NODE_ENV || 'development',
       version: process.env.npm_package_version || '1.0.0',
       checks: {
-        database: database.status === 'fulfilled' ? database.value : { status: 'unhealthy', error: database.reason },
-        supabase: supabase.status === 'fulfilled' ? supabase.value : { status: 'unhealthy', error: supabase.reason },
+        database:
+          database.status === 'fulfilled'
+            ? database.value
+            : { status: 'unhealthy', error: database.reason },
+        supabase:
+          supabase.status === 'fulfilled'
+            ? supabase.value
+            : { status: 'unhealthy', error: supabase.reason },
       },
     };
   }
@@ -59,7 +65,7 @@ export class HealthService {
       return {
         status: 'unhealthy',
         message: 'Database connection failed',
-        error: error.message,
+        error: (error as any).message,
       };
     }
   }
@@ -67,10 +73,10 @@ export class HealthService {
   async checkSupabase() {
     try {
       const startTime = Date.now();
-      
+
       // Test Supabase connection by trying to get user (will fail but connection works)
       await this.supabase.auth.getUser();
-      
+
       const responseTime = Date.now() - startTime;
 
       return {
@@ -80,7 +86,10 @@ export class HealthService {
       };
     } catch (error) {
       // If it's an auth error, Supabase is actually working
-      if (error.message?.includes('JWT') || error.message?.includes('session')) {
+      if (
+        (error as any).message?.includes('JWT') ||
+        (error as any).message?.includes('session')
+      ) {
         return {
           status: 'healthy',
           message: 'Supabase connection successful',
@@ -91,7 +100,7 @@ export class HealthService {
       return {
         status: 'unhealthy',
         message: 'Supabase connection failed',
-        error: error.message,
+        error: (error as any).message,
       };
     }
   }

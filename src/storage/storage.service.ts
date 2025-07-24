@@ -11,15 +11,16 @@ export class StorageService {
   constructor() {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
-    this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos';
+    this.bucketName =
+      process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos';
   }
 
   async uploadImage(
     file: Express.Multer.File,
     userId: number,
-    weightId: number
+    weightId: number,
   ): Promise<{
     thumbnailUrl: string;
     mediumUrl: string;
@@ -39,8 +40,14 @@ export class StorageService {
 
       // Upload all sizes
       const [thumbnailResult, mediumResult, fullResult] = await Promise.all([
-        this.uploadBuffer(thumbnailBuffer, `${baseFileName}_thumbnail.${fileExtension}`),
-        this.uploadBuffer(mediumBuffer, `${baseFileName}_medium.${fileExtension}`),
+        this.uploadBuffer(
+          thumbnailBuffer,
+          `${baseFileName}_thumbnail.${fileExtension}`,
+        ),
+        this.uploadBuffer(
+          mediumBuffer,
+          `${baseFileName}_medium.${fileExtension}`,
+        ),
         this.uploadBuffer(fullBuffer, `${baseFileName}_full.${fileExtension}`),
       ]);
 
@@ -78,10 +85,13 @@ export class StorageService {
     }
   }
 
-  async deleteAllImagesForWeight(userId: number, weightId: number): Promise<void> {
+  async deleteAllImagesForWeight(
+    userId: number,
+    weightId: number,
+  ): Promise<void> {
     try {
       const folderPath = `${userId}/${weightId}/`;
-      
+
       // List all files in the folder
       const { data: files, error: listError } = await this.supabase.storage
         .from(this.bucketName)
@@ -93,8 +103,8 @@ export class StorageService {
       }
 
       if (files && files.length > 0) {
-        const filePaths = files.map(file => `${folderPath}${file.name}`);
-        
+        const filePaths = files.map((file) => `${folderPath}${file.name}`);
+
         const { error: deleteError } = await this.supabase.storage
           .from(this.bucketName)
           .remove(filePaths);
@@ -108,7 +118,11 @@ export class StorageService {
     }
   }
 
-  private async resizeImage(buffer: Buffer, width: number, height: number): Promise<Buffer> {
+  private async resizeImage(
+    buffer: Buffer,
+    width: number,
+    height: number,
+  ): Promise<Buffer> {
     return sharp(buffer)
       .resize(width, height, {
         fit: 'cover',
@@ -118,8 +132,11 @@ export class StorageService {
       .toBuffer();
   }
 
-  private async uploadBuffer(buffer: Buffer, fileName: string): Promise<{ publicUrl: string }> {
-    const { data, error } = await this.supabase.storage
+  private async uploadBuffer(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<{ publicUrl: string }> {
+    const { error } = await this.supabase.storage
       .from(this.bucketName)
       .upload(fileName, buffer, {
         contentType: 'image/jpeg',

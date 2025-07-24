@@ -14,14 +14,14 @@ export class ValidationPipe implements PipeTransform<any> {
       return value;
     }
 
-    const object = plainToInstance(metatype, value);
+    const object: object = plainToInstance(metatype, value);
     const errors = await validate(object);
 
     if (errors.length > 0) {
-      const errorMessages = errors.map(error => {
+      const errorMessages = errors.map((error) => {
         return Object.values(error.constraints || {}).join(', ');
       });
-      
+
       throw new BadRequestException({
         message: 'Datos de entrada inválidos',
         errors: errorMessages,
@@ -31,7 +31,7 @@ export class ValidationPipe implements PipeTransform<any> {
     return object;
   }
 
-  private toValidate(metatype: Function): boolean {
+  private toValidate(metatype: { new (): any } | Function): boolean {
     const types: Function[] = [String, Boolean, Number, Array, Object];
     return !types.includes(metatype);
   }

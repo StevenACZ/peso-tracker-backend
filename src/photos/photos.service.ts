@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { CreatePhotoDto } from './dto/create-photo.dto';
@@ -10,7 +15,11 @@ export class PhotosService {
     private storageService: StorageService,
   ) {}
 
-  async uploadPhoto(userId: number, file: Express.Multer.File, createPhotoDto: CreatePhotoDto) {
+  async uploadPhoto(
+    userId: number,
+    file: Express.Multer.File,
+    createPhotoDto: CreatePhotoDto,
+  ) {
     const { weightId, notes } = createPhotoDto;
 
     // Verify weight exists and belongs to user
@@ -23,12 +32,18 @@ export class PhotosService {
     }
 
     if (weight.userId !== userId) {
-      throw new ForbiddenException('No tienes permisos para agregar fotos a este registro');
+      throw new ForbiddenException(
+        'No tienes permisos para agregar fotos a este registro',
+      );
     }
 
     try {
       // Upload image to storage
-      const imageUrls = await this.storageService.uploadImage(file, userId, weightId);
+      const imageUrls = await this.storageService.uploadImage(
+        file,
+        userId,
+        weightId,
+      );
 
       // Save photo record to database
       const photo = await this.prisma.photo.create({
@@ -46,15 +61,20 @@ export class PhotosService {
       });
 
       return photo;
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Error al subir la foto');
     }
   }
 
-  async findAll(userId: number, page: number = 1, limit: number = 10, weightId?: number) {
+  async findAll(
+    userId: number,
+    page: number = 1,
+    limit: number = 10,
+    weightId?: number,
+  ) {
     const skip = (page - 1) * limit;
-    
-    const where: any = { userId };
+
+    const where: { userId: number; weightId?: number } = { userId };
     if (weightId) {
       where.weightId = weightId;
     }
@@ -96,7 +116,9 @@ export class PhotosService {
     }
 
     if (photo.userId !== userId) {
-      throw new ForbiddenException('No tienes permisos para acceder a esta foto');
+      throw new ForbiddenException(
+        'No tienes permisos para acceder a esta foto',
+      );
     }
 
     return photo;

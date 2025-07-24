@@ -1,43 +1,25 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from './common/pipes/validation.pipe';
 import helmet from 'helmet';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Security middleware
   app.use(helmet());
+  app.enableCors();
+  app.useGlobalPipes(new ValidationPipe());
 
-  // CORS configuration
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  });
+  // Swagger/OpenAPI setup
+  const config = new DocumentBuilder()
+    .setTitle('Peso Tracker API')
+    .setDescription('Documentación de la API de Peso Tracker')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: false,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: false,
-      },
-      skipMissingProperties: false,
-      skipNullProperties: false,
-      skipUndefinedProperties: false,
-    }),
-  );
-
-  // API prefix
-  app.setGlobalPrefix('api');
-
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  
-  console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+  await app.listen(process.env.PORT || 3000);
 }
-bootstrap();
+bootstrap().catch((err) => console.error(err));
