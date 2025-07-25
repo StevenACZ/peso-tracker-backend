@@ -22,8 +22,21 @@ export class GoalsService {
       throw new BadRequestException('La fecha objetivo debe ser en el futuro');
     }
 
-    // If it's a milestone goal, validate parent goal exists and belongs to user
-    if (type === 'milestone' && parentGoalId) {
+    // Validate parentGoalId logic based on goal type
+    if (type === 'main' && parentGoalId) {
+      throw new BadRequestException(
+        'Las metas principales no pueden tener una meta padre',
+      );
+    }
+
+    if (type === 'milestone' && !parentGoalId) {
+      throw new BadRequestException(
+        'Las metas milestone deben tener una meta padre',
+      );
+    }
+
+    // If parentGoalId is provided, validate parent goal exists and belongs to user
+    if (parentGoalId) {
       const parentGoal = await this.prisma.goal.findUnique({
         where: { id: parentGoalId },
       });

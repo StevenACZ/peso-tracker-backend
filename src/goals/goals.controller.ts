@@ -39,14 +39,18 @@ export class GoalsController {
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
-  create(@CurrentUser() user: { id: number }, @Body() createGoalDto: CreateGoalDto) {
+  create(
+    @CurrentUser() user: { id: number },
+    @Body() createGoalDto: CreateGoalDto,
+  ) {
     // Convert and clean the DTO
     const processedDto = {
       ...createGoalDto,
       targetWeight: Number(createGoalDto.targetWeight),
-      parentGoalId: createGoalDto.parentGoalId
-        ? Number(createGoalDto.parentGoalId)
-        : undefined,
+      parentGoalId:
+        createGoalDto.parentGoalId && Number(createGoalDto.parentGoalId) > 0
+          ? Number(createGoalDto.parentGoalId)
+          : undefined,
       milestoneNumber: createGoalDto.milestoneNumber
         ? Number(createGoalDto.milestoneNumber)
         : undefined,
@@ -73,7 +77,10 @@ export class GoalsController {
   })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Meta no encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: { id: number },
+  ) {
     return this.goalsService.findOne(id, user.id);
   }
 
