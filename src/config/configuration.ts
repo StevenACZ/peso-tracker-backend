@@ -1,34 +1,59 @@
-export default () => ({
-  port: parseInt(process.env.PORT || '3000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
+export default () => {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const isProduction = nodeEnv === 'production';
 
-  database: {
-    url: process.env.DATABASE_URL,
-    directUrl: process.env.DIRECT_URL,
-  },
+  return {
+    port: parseInt(process.env.PORT || '3000', 10),
+    nodeEnv,
+    isProduction,
 
-  jwt: {
-    secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-  },
+    database: {
+      url: process.env.DATABASE_URL,
+      directUrl: process.env.DIRECT_URL,
+    },
 
-  bcrypt: {
-    saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
-  },
+    jwt: {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    },
 
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    anonKey: process.env.SUPABASE_ANON_KEY,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    storageBucket: process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos',
-  },
+    bcrypt: {
+      saltRounds: parseInt(
+        process.env.BCRYPT_SALT_ROUNDS || (isProduction ? '12' : '10'),
+        10,
+      ),
+    },
 
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  },
+    supabase: {
+      url: process.env.SUPABASE_URL,
+      anonKey: process.env.SUPABASE_ANON_KEY,
+      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      storageBucket:
+        process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos',
+    },
 
-  rateLimit: {
-    ttl: parseInt(process.env.RATE_LIMIT_TTL || '60', 10),
-    limit: parseInt(process.env.RATE_LIMIT_LIMIT || '100', 10),
-  },
-});
+    cors: {
+      origin: isProduction
+        ? process.env.FRONTEND_URL?.split(',') || [
+            'https://your-frontend-domain.com',
+          ]
+        : process.env.FRONTEND_URL || 'http://localhost:3000',
+      credentials: true,
+    },
+
+    rateLimit: {
+      ttl: parseInt(
+        process.env.RATE_LIMIT_TTL || (isProduction ? '60' : '300'),
+        10,
+      ),
+      limit: parseInt(
+        process.env.RATE_LIMIT_LIMIT || (isProduction ? '100' : '1000'),
+        10,
+      ),
+    },
+
+    logging: {
+      level: isProduction ? 'error' : 'debug',
+    },
+  };
+};

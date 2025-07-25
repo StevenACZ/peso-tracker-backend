@@ -1,4 +1,5 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
@@ -6,6 +7,7 @@ export class LoginDto {
     example: 'test2@example.com',
     description: 'Correo electrónico registrado',
   })
+  @Expose()
   @IsEmail()
   @IsNotEmpty()
   email: string;
@@ -14,6 +16,7 @@ export class LoginDto {
     example: 'password123',
     description: 'Contraseña del usuario',
   })
+  @Expose()
   @IsString()
   @IsNotEmpty()
   password: string;

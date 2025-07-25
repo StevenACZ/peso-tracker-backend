@@ -5,10 +5,12 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
+import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
   @ApiProperty({ example: 'testuser', description: 'Nombre de usuario único' })
+  @Expose()
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -19,6 +21,7 @@ export class RegisterDto {
     example: 'test@example.com',
     description: 'Correo electrónico único',
   })
+  @Expose()
   @IsEmail()
   @IsNotEmpty()
   email: string;
@@ -27,6 +30,7 @@ export class RegisterDto {
     example: 'password123',
     description: 'Contraseña segura (mínimo 6 caracteres)',
   })
+  @Expose()
   @IsString()
   @IsNotEmpty()
   @MinLength(6)

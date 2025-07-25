@@ -7,11 +7,12 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Expose } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWeightDto {
   @ApiProperty({ example: 72.5, description: 'Peso registrado (kg)' })
+  @Expose()
   @IsNumber({ maxDecimalPlaces: 1 })
   @IsNotEmpty()
   @Min(1)
@@ -23,6 +24,7 @@ export class CreateWeightDto {
     example: '2026-01-25',
     description: 'Fecha del registro de peso (YYYY-MM-DD)',
   })
+  @Expose()
   @IsDateString()
   @IsNotEmpty()
   date: string;
@@ -31,6 +33,7 @@ export class CreateWeightDto {
     example: 'Peso de prueba',
     description: 'Notas adicionales',
   })
+  @Expose()
   @IsOptional()
   @IsString()
   notes?: string;

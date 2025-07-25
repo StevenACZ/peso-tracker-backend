@@ -12,6 +12,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "start:dev:env": "cp .env.development .env && npm run start:dev",
+    "start:prod:env": "cp .env.production .env && npm run start:prod",
     "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
@@ -19,7 +21,9 @@
     "db:seed": "ts-node prisma/seed.ts",
     "deploy:build": "npm run build && npm run db:generate",
     "deploy:migrate": "npx prisma migrate deploy",
-    "deploy:start": "npm run deploy:migrate && npm run start:prod"
+    "deploy:start": "npm run deploy:migrate && npm run start:prod",
+    "dev": "npm run start:dev:env",
+    "prod": "npm run build && npm run start:prod:env"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

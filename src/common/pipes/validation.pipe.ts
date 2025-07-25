@@ -26,7 +26,7 @@ export class ValidationPipe implements PipeTransform<any> {
     // ✅ Agrega enableImplicitConversion: true para habilitar transformaciones
     const object: object = plainToInstance(metatype, value, {
       enableImplicitConversion: true, // ← Esto es clave
-      excludeExtraneousValues: true,
+      excludeExtraneousValues: false, // ← Cambiado a false para no excluir propiedades
     });
 
     // console.log('=== AFTER TRANSFORMATION ===');
