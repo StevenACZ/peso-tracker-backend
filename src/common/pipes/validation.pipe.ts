@@ -13,14 +13,33 @@ export class ValidationPipe implements PipeTransform<any> {
   constructor(private options?: ValidationPipeOptions) {}
 
   async transform(value: any, { metatype }: ArgumentMetadata) {
+    // console.log('=== VALIDATION PIPE DEBUG ===');
+    // console.log('Input value:', value);
+    // console.log('Input type:', typeof value);
+    // console.log('Metatype:', metatype?.name);
+    // console.log('==============================');
+
     if (!metatype || !this.toValidate(metatype)) {
       return value;
     }
 
-    const object: object = plainToInstance(metatype, value);
+    // ✅ Agrega enableImplicitConversion: true para habilitar transformaciones
+    const object: object = plainToInstance(metatype, value, {
+      enableImplicitConversion: true, // ← Esto es clave
+      excludeExtraneousValues: true,
+    });
+
+    // console.log('=== AFTER TRANSFORMATION ===');
+    // console.log('Transformed object:', object);
+    // console.log('=============================');
+
     const errors = await validate(object, this.options);
 
     if (errors.length > 0) {
+      // console.log('=== VALIDATION ERRORS ===');
+      // console.log('Errors:', errors);
+      // console.log('=========================');
+
       const errorMessages = errors.map((error) => {
         return Object.values(error.constraints || {}).join(', ');
       });
