@@ -23,7 +23,17 @@
     "deploy:migrate": "npx prisma migrate deploy",
     "deploy:start": "npm run deploy:migrate && npm run start:prod",
     "dev": "npm run start:dev:env",
-    "prod": "npm run build && npm run start:prod:env"
+    "prod": "npm run build && npm run start:prod:env",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
+    "supabase:reset": "npx supabase db reset",
+    "dev:local": "npm run supabase:start && npm run start:dev:env",
+    "db:push:local": "cp .env.development .env && npx prisma db push",
+    "db:studio:local": "cp .env.development .env && npm run db:studio",
+    "db:migrate:local": "cp .env.development .env && npx prisma migrate dev",
+    "go": "npm run supabase:start && npm run db:push:local && npm run start:dev:env",
+    "restart": "npm run supabase:stop && npm run go"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -67,6 +77,7 @@
     "globals": "^16.0.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
+    "supabase": "^2.31.8",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

@@ -12,6 +12,7 @@ Backend API para la aplicación de seguimiento de peso construida con NestJS, Pr
 - **Seguridad**: Implementación de Helmet, CORS y Rate Limiting para proteger la aplicación.
 - **Health Checks**: Endpoints para monitorear el estado de la aplicación y sus dependencias (base de datos, Supabase).
 - **Documentación de API**: Documentación completa y detallada de la API con Swagger (OpenAPI).
+- **Desarrollo Local**: Configuración completa con Supabase local para desarrollo rápido.
 
 ## 🛠️ Tecnologías
 
@@ -27,56 +28,97 @@ Backend API para la aplicación de seguimiento de peso construida con NestJS, Pr
 ## 📋 Requisitos Previos
 
 - Node.js (v18 o superior)
-- pnpm (o npm/yarn)
-- Docker (opcional, para base de datos)
+- npm/yarn/pnpm
+- Docker (para Supabase local)
+- Supabase CLI (`npm install -g supabase`)
 
 ## 🔧 Instalación y Configuración
 
-1. **Clonar el repositorio:**
+### 🚀 Desarrollo Local (Súper Rápido)
+
+1. **Clonar e instalar:**
+
    ```bash
    git clone https://github.com/your-username/peso-tracker-backend.git
    cd peso-tracker-backend
+   npm install
    ```
 
-2. **Instalar dependencias:**
+2. **¡Iniciar todo de una vez!**
+
    ```bash
-   pnpm install
+   npm run go
    ```
 
-3. **Configurar variables de entorno:**
-   Copia el archivo de ejemplo y edítalo con tus propias claves:
+   **¡Eso es todo!** 🎉 Este comando mágico:
+   - ✅ Inicia Supabase local automáticamente
+   - ✅ Configura la base de datos con tu esquema
+   - ✅ Inicia el servidor de desarrollo
+   - ✅ Todo listo para desarrollar sin configuración adicional
+
+### 🔄 Comandos de Desarrollo
+
+- **`npm run go`** - Comando mágico: inicia todo automáticamente
+- **`npm run restart`** - Reinicia todo desde cero
+- **`npm run supabase:start`** - Solo inicia Supabase local
+- **`npm run supabase:stop`** - Detiene Supabase local
+- **`npm run db:studio:local`** - Abre Prisma Studio con BD local
+
+### 📝 Agregar Nuevas Tablas
+
+1. Modifica `prisma/schema.prisma`
+2. Ejecuta `npm run go` (actualiza automáticamente la BD)
+3. ¡Listo! Las nuevas tablas están disponibles
+
+### 🌐 URLs Locales
+
+- **API**: http://localhost:3000
+- **Swagger**: http://localhost:3000/api
+- **Supabase Studio**: http://127.0.0.1:54323
+- **Base de datos**: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+### ☁️ Configuración para Producción
+
+1. **Configurar variables de entorno:**
+
    ```bash
-   cp .env.example .env
+   cp .env.example .env.production
+   # Editar .env.production con tus credenciales de Supabase Cloud
    ```
 
-4. **Configurar la base de datos:**
-   Asegúrate de tener una instancia de PostgreSQL en ejecución. Luego, aplica las migraciones de la base de datos:
+2. **Iniciar en modo producción:**
    ```bash
-   npx prisma migrate dev
+   npm run prod
    ```
 
-5. **Iniciar la aplicación:**
-   ```bash
-   pnpm run start:dev
-   ```
+## 🔐 Variables de Entorno
+
+### Desarrollo Local
+
+El archivo `.env.development` ya está configurado con credenciales locales seguras:
+
+- **Supabase URL**: http://127.0.0.1:54321
+- **JWT Secret**: super-secret-jwt-token-with-at-least-32-characters-long
+- **Base de datos**: PostgreSQL local en Docker
+
+### Producción
+
+Configura `.env.production` con tus credenciales reales de Supabase Cloud.
 
 ## 📚 Documentación de la API (Swagger)
 
-Una vez que la aplicación esté en funcionamiento, puedes acceder a la documentación de la API generada por Swagger en la siguiente URL:
+Una vez que la aplicación esté en funcionamiento, accede a la documentación:
 
 [http://localhost:3000/api](http://localhost:3000/api)
 
-La documentación proporciona detalles sobre cada endpoint, incluyendo:
+La documentación incluye:
 
-- **Descripción**: Qué hace el endpoint.
-- **Parámetros**: Los parámetros de la ruta, consulta y cuerpo de la solicitud.
-- **Cuerpo de la Solicitud**: Ejemplos de JSON para las solicitudes POST y PATCH.
-- **Respuestas**: Ejemplos de respuestas para diferentes códigos de estado HTTP.
-- **Esquemas**: Definiciones de los DTOs utilizados en la API.
+- **Descripción**: Qué hace cada endpoint
+- **Parámetros**: Parámetros de ruta, consulta y cuerpo
+- **Ejemplos**: JSON de solicitudes y respuestas
+- **Esquemas**: Definiciones de DTOs
 
 ## 🧪 Testing
-
-Para ejecutar las pruebas unitarias y de integración, utiliza el siguiente comando:
 
 ```bash
 npm test
@@ -84,27 +126,51 @@ npm test
 
 ## 🐳 Docker
 
-También puedes ejecutar la aplicación utilizando Docker:
+1. **Construir imagen:**
 
-1. **Construir la imagen de Docker:**
    ```bash
    docker build -t peso-tracker-backend .
    ```
 
-2. **Ejecutar el contenedor:**
+2. **Ejecutar contenedor:**
    ```bash
    docker run -p 3000:3000 --env-file .env peso-tracker-backend
    ```
 
+## ❓ Preguntas Frecuentes
+
+### ¿Cómo funciona el desarrollo local vs producción?
+
+- **Local**: Base de datos PostgreSQL en Docker, completamente aislada
+- **Producción**: Supabase Cloud con tus credenciales reales
+- **Cambio automático**: Los scripts manejan el cambio de entorno automáticamente
+
+### ¿Qué pasa si reinicio mi computadora?
+
+Solo ejecuta `npm run go` nuevamente. Docker iniciará automáticamente.
+
+### ¿Los datos se comparten entre local y producción?
+
+No, son bases de datos completamente separadas y seguras.
+
+### ¿Puedo usar el comando corto para cambios en el esquema?
+
+Sí, `npm run go` detecta cambios en `prisma/schema.prisma` y actualiza la BD automáticamente.
+
+## 🚨 Notas Importantes
+
+- **Docker debe estar ejecutándose** para Supabase local
+- **Puertos 54321-54324** deben estar disponibles
+- **Usa siempre los scripts npm** para cambio de entornos
+- **Las credenciales locales son seguras** para compartir en el equipo
+
 ## 🤝 Contribuciones
 
-Las contribuciones son bienvenidas. Por favor, sigue los siguientes pasos:
-
-1. Haz un fork del proyecto.
-2. Crea una nueva rama (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y haz commit (`git commit -m 'Añadir nueva funcionalidad'`).
-4. Sube tus cambios a la rama (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request.
+1. Fork del proyecto
+2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -m 'Añadir nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
 
 ## 📄 Licencia
 
