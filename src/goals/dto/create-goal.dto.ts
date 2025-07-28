@@ -7,7 +7,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateGoalDto {
@@ -17,9 +17,10 @@ export class CreateGoalDto {
   })
   @Expose()
   @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 1 })
+  @Transform(({ value }) => Math.round(value * 100) / 100)
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
-  @Max(999.9)
+  @Max(999.99)
   targetWeight: number;
 
   @ApiProperty({

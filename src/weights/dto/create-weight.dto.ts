@@ -7,17 +7,18 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type, Expose } from 'class-transformer';
+import { Type, Expose, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWeightDto {
   @ApiProperty({ example: 72.5, description: 'Peso registrado (kg)' })
   @Expose()
-  @IsNumber({ maxDecimalPlaces: 1 })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @IsNotEmpty()
   @Min(1)
-  @Max(999.9)
+  @Max(999.99)
   @Type(() => Number)
+  @Transform(({ value }) => Math.round(value * 100) / 100)
   weight: number;
 
   @ApiProperty({

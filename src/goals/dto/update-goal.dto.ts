@@ -8,7 +8,7 @@ import {
   Max,
   ValidateIf,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateGoalDto {
@@ -17,10 +17,11 @@ export class UpdateGoalDto {
     description: 'Nuevo peso objetivo (kg)',
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 1 })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
-  @Max(999.9)
+  @Max(999.99)
   @Type(() => Number)
+  @Transform(({ value }) => Math.round(value * 100) / 100)
   targetWeight?: number;
 
   @ApiPropertyOptional({

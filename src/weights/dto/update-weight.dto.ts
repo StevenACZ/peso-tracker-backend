@@ -15,10 +15,10 @@ export class UpdateWeightDto {
     description: 'Nuevo peso registrado (kg)',
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 1 })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
-  @Max(999.9)
-  @Transform(({ value }: { value: string }) => parseFloat(value))
+  @Max(999.99)
+  @Transform(({ value }: { value: string }) => Math.round(parseFloat(value) * 100) / 100)
   weight?: number;
 
   @ApiPropertyOptional({
