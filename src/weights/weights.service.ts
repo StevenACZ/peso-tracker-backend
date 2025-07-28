@@ -157,14 +157,50 @@ export class WeightsService {
   }
 
   async getChartData(userId: number, timeRange: string = '1month', page: number = 0) {
-    // Primero obtener la fecha más antigua y más reciente del usuario
-    const dateRange = await this.prisma.weight.aggregate({
-      where: { userId },
-      _min: { date: true },
-      _max: { date: true },
-    });
+    // Si es 'all', devolver todos los datos (mínimo 2 para crear gráfico)
+    if (timeRange === 'all') {
+      const weights = await this.prisma.weight.findMany({
+        where: { userId },
+        orderBy: { date: 'asc' },
+        select: {
+          weight: true,
+          date: true,
+        },
+      });
 
-    if (!dateRange._min?.date || !dateRange._max?.date) {
+      // Si hay menos de 2 registros, no se puede crear un gráfico
+      if (weights.length < 2) {
+        return {
+          data: [],
+          pagination: {
+            currentPeriod: '',
+            hasNext: false,
+            hasPrevious: false,
+            totalPeriods: 0,
+            currentPage: 0,
+          },
+        };
+      }
+
+      return {
+        data: weights.map((weight) => ({
+          weight: Number(weight.weight),
+          date: weight.date,
+        })),
+        pagination: {
+          currentPeriod: 'Todos los registros',
+          hasNext: false,
+          hasPrevious: false,
+          totalPeriods: 1,
+          currentPage: 0,
+        },
+      };
+    }
+
+    // Obtener períodos que tienen datos
+    const periodsWithData = await this.getPeriodsWithData(userId, timeRange);
+    
+    if (periodsWithData.length === 0) {
       return {
         data: [],
         pagination: {
@@ -177,24 +213,20 @@ export class WeightsService {
       };
     }
 
-    const oldestDate = dateRange._min.date;
-    const newestDate = dateRange._max.date;
+    // Verificar que la página solicitada existe
+    if (page >= periodsWithData.length) {
+      page = periodsWithData.length - 1;
+    }
 
-    // Calcular el período actual basado en la página
-    const { startDate, endDate, periodLabel } = this.calculatePeriodRange(
-      timeRange,
-      page,
-      newestDate,
-      oldestDate,
-    );
-
+    const currentPeriod = periodsWithData[page];
+    
     // Obtener pesos del período actual
     const weights = await this.prisma.weight.findMany({
       where: {
         userId,
         date: {
-          gte: startDate,
-          lte: endDate,
+          gte: currentPeriod.startDate,
+          lte: currentPeriod.endDate,
         },
       },
       orderBy: { date: 'asc' },
@@ -204,24 +236,100 @@ export class WeightsService {
       },
     });
 
-    // Calcular metadata de navegación
-    const totalPeriods = this.calculateTotalPeriods(timeRange, oldestDate, newestDate);
-    const hasNext = page < totalPeriods - 1;
-    const hasPrevious = page > 0;
-
     return {
       data: weights.map((weight) => ({
         weight: Number(weight.weight),
         date: weight.date,
       })),
       pagination: {
-        currentPeriod: periodLabel,
-        hasNext,
-        hasPrevious,
-        totalPeriods,
+        currentPeriod: currentPeriod.label,
+        hasNext: page < periodsWithData.length - 1,
+        hasPrevious: page > 0,
+        totalPeriods: periodsWithData.length,
         currentPage: page,
       },
     };
+  }
+
+  private async getPeriodsWithData(userId: number, timeRange: string) {
+    // Obtener todas las fechas únicas de los pesos del usuario
+    const weights = await this.prisma.weight.findMany({
+      where: { userId },
+      select: { date: true },
+      orderBy: { date: 'desc' },
+    });
+
+    if (weights.length < 2) {
+      return [];
+    }
+
+    const periodCounts = new Map<string, { startDate: Date; endDate: Date; label: string; count: number }>();
+
+    // Agrupar fechas por período según el timeRange y contar registros
+    for (const weight of weights) {
+      const date = new Date(weight.date);
+      let periodKey: string;
+      let startDate: Date;
+      let endDate: Date;
+      let label: string;
+
+      switch (timeRange) {
+        case '1month': {
+          periodKey = `${date.getFullYear()}-${date.getMonth()}`;
+          startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+          endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+          label = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+          break;
+        }
+        case '3months': {
+          const quarter = Math.floor(date.getMonth() / 3);
+          periodKey = `${date.getFullYear()}-Q${quarter}`;
+          startDate = new Date(date.getFullYear(), quarter * 3, 1);
+          endDate = new Date(date.getFullYear(), quarter * 3 + 3, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          label = `Q${quarter + 1} ${date.getFullYear()}`;
+          break;
+        }
+        case '6months': {
+          const semester = Math.floor(date.getMonth() / 6);
+          periodKey = `${date.getFullYear()}-S${semester}`;
+          startDate = new Date(date.getFullYear(), semester * 6, 1);
+          endDate = new Date(date.getFullYear(), semester * 6 + 6, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          label = `S${semester + 1} ${date.getFullYear()}`;
+          break;
+        }
+        case '1year': {
+          periodKey = `${date.getFullYear()}`;
+          startDate = new Date(date.getFullYear(), 0, 1);
+          endDate = new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
+          
+          label = `${date.getFullYear()}`;
+          break;
+        }
+        default:
+          continue;
+      }
+
+      if (!periodCounts.has(periodKey)) {
+        periodCounts.set(periodKey, { startDate, endDate, label, count: 0 });
+      }
+      periodCounts.get(periodKey)!.count++;
+    }
+
+    // Filtrar períodos que tienen al menos 2 registros
+    const validPeriods = Array.from(periodCounts.values())
+      .filter(period => period.count >= 2)
+      .map(({ startDate, endDate, label }) => ({ startDate, endDate, label }));
+
+    // Ordenar por fecha (más reciente primero)
+    return validPeriods.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
   }
 
   private calculatePeriodRange(
@@ -236,23 +344,6 @@ export class WeightsService {
     let periodLabel: string;
 
     switch (timeRange) {
-      case '1week': {
-        // Encontrar el inicio de la semana más reciente (domingo)
-        const mostRecentSunday = new Date(now);
-        mostRecentSunday.setDate(now.getDate() - now.getDay());
-        mostRecentSunday.setHours(0, 0, 0, 0);
-        
-        // Calcular la semana actual basada en la página
-        startDate = new Date(mostRecentSunday);
-        startDate.setDate(startDate.getDate() - (page * 7));
-        
-        endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
-        
-        periodLabel = `Semana del ${startDate.toLocaleDateString()} al ${endDate.toLocaleDateString()}`;
-        break;
-      }
       case '1month': {
         // Calcular el mes actual basado en la página
         const targetDate = new Date(now.getFullYear(), now.getMonth() - page, 1);
@@ -318,11 +409,6 @@ export class WeightsService {
     const newest = new Date(newestDate);
     
     switch (timeRange) {
-      case '1week': {
-        const diffTime = newest.getTime() - oldest.getTime();
-        const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-        return Math.max(1, diffWeeks);
-      }
       case '1month': {
         const diffMonths = (newest.getFullYear() - oldest.getFullYear()) * 12 + 
           (newest.getMonth() - oldest.getMonth()) + 1;

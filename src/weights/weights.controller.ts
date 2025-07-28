@@ -20,7 +20,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateWeightDto } from './dto/create-weight.dto';
 import { UpdateWeightDto } from './dto/update-weight.dto';
-import { GetWeightsQueryDto } from './dto/get-weights-query.dto';
 import { GetChartDataQueryDto } from './dto/get-chart-data-query.dto';
 import { GetPaginatedQueryDto } from './dto/get-paginated-query.dto';
 import {
@@ -99,12 +98,12 @@ export class WeightsController {
   @Get('chart-data')
   @ApiOperation({
     summary: 'Obtener datos de peso para gráficos con paginación temporal',
-    description: 'Retorna datos de peso por períodos completos (semana, mes, trimestre, semestre, año) con navegación entre períodos.',
+    description: 'Retorna datos de peso por períodos que contienen registros (todos, mes, trimestre, semestre, año) con navegación entre períodos.',
   })
   @ApiQuery({
     name: 'timeRange',
     description: 'Tipo de período a mostrar',
-    enum: ['1week', '1month', '3months', '6months', '1year'],
+    enum: ['all', '1month', '3months', '6months', '1year'],
     required: false,
   })
   @ApiQuery({
@@ -195,26 +194,6 @@ export class WeightsController {
     );
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Obtener todos los registros de peso del usuario' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de registros de peso.',
-  })
-  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
-  @ApiResponse({ status: 401, description: 'No autorizado.' })
-  findAll(
-    @CurrentUser() user: { id: number },
-    @Query() query: GetWeightsQueryDto,
-  ) {
-    return this.weightsService.findAll(
-      user.id,
-      query.page,
-      query.limit,
-      query.startDate,
-      query.endDate,
-    );
-  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un registro de peso por ID' })

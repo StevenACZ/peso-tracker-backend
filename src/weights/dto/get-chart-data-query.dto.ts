@@ -7,11 +7,11 @@ export class GetChartDataQueryDto {
     description: 'Tipo de período para los datos del gráfico',
     required: false,
     default: '1month',
-    enum: ['1week', '1month', '3months', '6months', '1year'],
+    enum: ['all', '1month', '3months', '6months', '1year'],
   })
   @IsOptional()
   @IsString()
-  @IsIn(['1week', '1month', '3months', '6months', '1year'])
+  @IsIn(['all', '1month', '3months', '6months', '1year'])
   timeRange?: string = '1month';
 
   @ApiProperty({
