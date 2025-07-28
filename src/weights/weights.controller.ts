@@ -96,6 +96,18 @@ export class WeightsController {
     return this.weightsService.update(id, user.id, updateWeightDto);
   }
 
+  @Get(':id/photo')
+  @ApiOperation({ summary: 'Obtener la foto asociada a un registro de peso' })
+  @ApiResponse({
+    status: 200,
+    description: 'La foto del peso.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Peso o foto no encontrada.' })
+  getWeightPhoto(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
+    return this.weightsService.getWeightPhoto(id, user.id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar un registro de peso' })

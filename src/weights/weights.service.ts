@@ -129,6 +129,16 @@ export class WeightsService {
     }
   }
 
+  async getWeightPhoto(weightId: number, userId: number) {
+    const weight = await this.findOne(weightId, userId);
+    
+    if (!weight.photos || weight.photos.length === 0) {
+      throw new NotFoundException('Este registro de peso no tiene foto asociada');
+    }
+
+    return weight.photos[0];
+  }
+
   async remove(id: number, userId: number) {
     await this.findOne(id, userId);
 

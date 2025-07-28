@@ -25,6 +25,7 @@ export class PhotosService {
     // Verify weight exists and belongs to user
     const weight = await this.prisma.weight.findUnique({
       where: { id: weightId },
+      include: { photos: true },
     });
 
     if (!weight) {
@@ -34,6 +35,13 @@ export class PhotosService {
     if (weight.userId !== userId) {
       throw new ForbiddenException(
         'No tienes permisos para agregar fotos a este registro',
+      );
+    }
+
+    // Check if weight already has a photo
+    if (weight.photos && weight.photos.length > 0) {
+      throw new BadRequestException(
+        'Este registro de peso ya tiene una foto. Elimina la actual para agregar una nueva.',
       );
     }
 
