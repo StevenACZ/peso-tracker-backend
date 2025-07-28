@@ -115,9 +115,8 @@ model Goal {
 
 ### Weights (Protected)
 - `POST /weights` - Create weight record with optional photo
-- `GET /weights` - List weights (with pagination & date filters)
-- `GET /weights/chart-data` - **NEW**: Temporal pagination for charts (periods: week/month/quarter/semester/year)
-- `GET /weights/paginated` - **NEW**: Traditional pagination for tables
+- `GET /weights/chart-data` - **ENHANCED**: Smart temporal pagination for charts with minimum data requirements
+- `GET /weights/paginated` - Traditional pagination for tables (ordered by newest first)
 - `GET /weights/:id` - Get specific weight
 - `GET /weights/:id/photo` - Get photo for specific weight
 - `PATCH /weights/:id` - Update weight with optional photo
@@ -138,14 +137,18 @@ model Goal {
 
 ## Key Business Logic
 
-### Temporal Pagination System (NEW)
-The API now implements a sophisticated temporal pagination system for chart data:
+### Smart Temporal Pagination System (**ENHANCED**)
+The API implements an intelligent temporal pagination system for chart data with minimum data requirements:
 
-#### Chart Data Endpoint (`/weights/chart-data`)
-- **Purpose**: Navigate through complete time periods for chart visualization
+#### Chart Data Endpoint (`/weights/chart-data`) - **ENHANCED**
+- **Purpose**: Navigate through periods that contain meaningful chart data (≥2 data points)
 - **Parameters**: 
-  - `timeRange`: Period type (`1week`, `1month`, `3months`, `6months`, `1year`)
+  - `timeRange`: Period type (`all`, `1month`, `3months`, `6months`, `1year`)
   - `page`: Period index (0 = most recent, 1 = previous, etc.)
+- **Key Features**:
+  - **Smart Filtering**: Only shows periods with ≥2 data points (required for line charts)
+  - **'all' Option**: Shows complete dataset when user has ≥2 total records
+  - **No Empty Pages**: Eliminates navigation through periods without data
 - **Response Format**:
 ```json
 {
@@ -154,8 +157,8 @@ The API now implements a sophisticated temporal pagination system for chart data
     "currentPeriod": "Enero 2025",
     "hasNext": true,
     "hasPrevious": true,
-    "totalPeriods": 25,
-    "currentPage": 5
+    "totalPeriods": 8,
+    "currentPage": 2
   }
 }
 ```
@@ -178,12 +181,14 @@ The API now implements a sophisticated temporal pagination system for chart data
 }
 ```
 
-#### Period Calculation Logic
-- **Week**: Sunday to Saturday periods
-- **Month**: Full calendar months
-- **Quarter**: 3-month periods (Q1, Q2, Q3, Q4)
-- **Semester**: 6-month periods (S1, S2)
-- **Year**: Full calendar years
+#### Period Calculation Logic (**UPDATED**)
+- **All**: Complete dataset (minimum 2 records required)
+- **Month**: Full calendar months (only months with ≥2 records shown)
+- **Quarter**: 3-month periods (Q1, Q2, Q3, Q4) (only quarters with ≥2 records shown)
+- **Semester**: 6-month periods (S1, S2) (only semesters with ≥2 records shown)
+- **Year**: Full calendar years (only years with ≥2 records shown)
+
+**Key Improvement**: Eliminated weekly option and empty period navigation. Now only periods containing sufficient data for meaningful charts are displayed.
 
 ### Photo Management
 1. **One Photo Per Weight**: Database constraint ensures integrity
@@ -315,7 +320,8 @@ npm run format                # Code formatting
 
 ### Testing New Features
 ```bash
-# Test chart data temporal pagination
+# Test chart data temporal pagination (enhanced with smart filtering)
+curl "http://localhost:3000/weights/chart-data?timeRange=all&page=0"
 curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=0"
 
 # Test table pagination
@@ -381,6 +387,25 @@ http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/{userId}/{we
 ### CORS
 - Configured for frontend URL
 - Environment-specific settings
+
+## Recent Improvements & Enhancements
+
+### Chart Data Endpoint Enhancements (Latest)
+**Problem Solved**: Previously, chart data endpoint generated many empty pages and single-point periods that couldn't create meaningful line graphs.
+
+**Improvements Made**:
+1. **Smart Period Filtering**: Only returns periods with ≥2 data points
+2. **'all' TimeRange**: New option to view complete dataset at once
+3. **Eliminated Empty Navigation**: No more pagination through periods without data
+4. **Removed Weekly Option**: Replaced '1week' with more useful 'all' option
+5. **Removed Obsolete Endpoint**: Cleaned up unused `GET /weights` endpoint
+
+**Impact**: Reduced navigation from 19+ empty pages to only meaningful periods with chart-worthy data.
+
+**Files Modified**:
+- `src/weights/dto/get-chart-data-query.dto.ts`
+- `src/weights/weights.controller.ts` 
+- `src/weights/weights.service.ts`
 
 ## Known Limitations & Future Improvements
 
