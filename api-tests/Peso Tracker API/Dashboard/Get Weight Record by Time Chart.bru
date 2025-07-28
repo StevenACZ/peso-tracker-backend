@@ -1,0 +1,20 @@
+meta {
+  name: Get Weight Record by Time Chart
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/weights/chart-data?timeRange=1year&page=1
+  body: none
+  auth: bearer
+}
+
+params:query {
+  timeRange: 1year
+  page: 1
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -2,7 +2,7 @@ import { IsOptional, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class GetPhotosQueryDto {
+export class GetPaginatedQueryDto {
   @ApiProperty({
     description: 'Número de página',
     required: false,
@@ -16,25 +16,14 @@ export class GetPhotosQueryDto {
   page?: number = 1;
 
   @ApiProperty({
-    description: 'Número de fotos por página',
+    description: 'Número de registros por página',
     required: false,
-    default: 10,
+    default: 5,
     minimum: 1,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit?: number = 10;
-
-  @ApiProperty({
-    description: 'Filtrar fotos por ID de registro de peso',
-    required: false,
-    minimum: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  weightId?: number;
+  limit?: number = 5;
 }

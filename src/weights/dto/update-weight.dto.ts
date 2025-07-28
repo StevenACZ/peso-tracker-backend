@@ -18,7 +18,9 @@ export class UpdateWeightDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
   @Max(999.99)
-  @Transform(({ value }: { value: string }) => Math.round(parseFloat(value) * 100) / 100)
+  @Transform(
+    ({ value }: { value: string }) => Math.round(parseFloat(value) * 100) / 100,
+  )
   weight?: number;
 
   @ApiPropertyOptional({
@@ -36,4 +38,12 @@ export class UpdateWeightDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    example: 'Notas de la foto actualizadas',
+    description: 'Notas adicionales para la foto',
+  })
+  @IsOptional()
+  @IsString()
+  photoNotes?: string;
 }

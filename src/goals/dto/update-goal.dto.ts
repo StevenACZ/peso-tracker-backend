@@ -1,13 +1,4 @@
-import {
-  IsOptional,
-  IsNumber,
-  IsDateString,
-  IsString,
-  IsIn,
-  Min,
-  Max,
-  ValidateIf,
-} from 'class-validator';
+import { IsOptional, IsNumber, IsDateString, Min, Max } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -31,41 +22,4 @@ export class UpdateGoalDto {
   @IsOptional()
   @IsDateString()
   targetDate?: string;
-
-  @ApiPropertyOptional({
-    example: 'milestone',
-    description: 'Tipo de meta: main o milestone',
-  })
-  @IsOptional()
-  @IsString()
-  @IsIn(['main', 'milestone'])
-  type?: string;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'Nuevo ID de meta padre (solo para milestone)',
-  })
-  @IsOptional()
-  @ValidateIf(
-    (o: UpdateGoalDto) =>
-      o.parentGoalId !== undefined &&
-      o.parentGoalId !== null
-  )
-  @IsNumber()
-  @Type(() => Number)
-  parentGoalId?: number;
-
-  @ApiPropertyOptional({
-    example: 2,
-    description: 'Nuevo número de hito (solo para milestone)',
-  })
-  @IsOptional()
-  @ValidateIf(
-    (o: UpdateGoalDto) =>
-      o.milestoneNumber !== undefined &&
-      o.milestoneNumber !== null
-  )
-  @IsNumber()
-  @Type(() => Number)
-  milestoneNumber?: number;
 }

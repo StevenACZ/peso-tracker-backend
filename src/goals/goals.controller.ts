@@ -43,30 +43,7 @@ export class GoalsController {
     @CurrentUser() user: { id: number },
     @Body() createGoalDto: CreateGoalDto,
   ) {
-    // Convert and clean the DTO
-    const processedDto = {
-      ...createGoalDto,
-      targetWeight: Number(createGoalDto.targetWeight),
-      parentGoalId:
-        createGoalDto.parentGoalId && Number(createGoalDto.parentGoalId) > 0
-          ? Number(createGoalDto.parentGoalId)
-          : undefined,
-      milestoneNumber: createGoalDto.milestoneNumber
-        ? Number(createGoalDto.milestoneNumber)
-        : undefined,
-    };
-    return this.goalsService.create(user.id, processedDto);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Obtener todas las metas del usuario' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de metas.',
-  })
-  @ApiResponse({ status: 401, description: 'No autorizado.' })
-  findAll(@CurrentUser() user: { id: number }) {
-    return this.goalsService.findAll(user.id);
+    return this.goalsService.create(user.id, createGoalDto);
   }
 
   @Get(':id')

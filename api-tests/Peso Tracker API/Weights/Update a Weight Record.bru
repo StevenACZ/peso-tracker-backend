@@ -6,7 +6,7 @@ meta {
 
 patch {
   url: {{baseUrl}}/weights/{{id_weight}}
-  body: json
+  body: multipartForm
   auth: bearer
 }
 
@@ -20,6 +20,11 @@ body:json {
     "date": "2024-07-25",
     "notes": "Updated notes for the weight record"
   }
+}
+
+body:multipart-form {
+  photo: @file(/Users/steven/Downloads/Screenshot 2025-07-26 at 17.32.55.jpg)
+  notes: Holaaaa
 }
 
 script:post-response {

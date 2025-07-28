@@ -1,14 +1,6 @@
-import {
-  IsNumber,
-  IsDateString,
-  IsString,
-  IsIn,
-  IsOptional,
-  Min,
-  Max,
-} from 'class-validator';
+import { IsNumber, IsDateString, Min, Max } from 'class-validator';
 import { Expose, Type, Transform } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateGoalDto {
   @ApiProperty({
@@ -30,32 +22,4 @@ export class CreateGoalDto {
   @Expose()
   @IsDateString()
   targetDate: string;
-
-  @ApiPropertyOptional({
-    example: 'main',
-    description: 'Tipo de meta: main o milestone',
-  })
-  @Expose()
-  @IsOptional()
-  @IsString()
-  @IsIn(['main', 'milestone'])
-  type?: string;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'ID de la meta padre (solo para milestone)',
-  })
-  @Expose()
-  @Type(() => Number)
-  @IsOptional()
-  parentGoalId?: number;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'Número de hito (solo para milestone)',
-  })
-  @Expose()
-  @Type(() => Number)
-  @IsOptional()
-  milestoneNumber?: number;
 }

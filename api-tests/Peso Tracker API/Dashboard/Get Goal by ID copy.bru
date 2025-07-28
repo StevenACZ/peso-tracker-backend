@@ -1,11 +1,11 @@
 meta {
-  name: Get All User Goals
+  name: Get Goal by ID copy
   type: http
-  seq: 5
+  seq: 1
 }
 
 get {
-  url: {{baseUrl}}/goals
+  url: {{baseUrl}}/dashboard
   body: none
   auth: bearer
 }
@@ -13,4 +13,3 @@ get {
 auth:bearer {
   token: {{token}}
 }
-

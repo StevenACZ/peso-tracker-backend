@@ -1,13 +1,18 @@
 meta {
-  name: Get Photo by ID Weight
+  name: Get Weight Record by Time Table
   type: http
-  seq: 6
+  seq: 3
 }
 
 get {
-  url: {{baseUrl}}/weights/{{id_weight}}/photo
+  url: {{baseUrl}}/weights/paginated?page=1&limit=5
   body: none
   auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 5
 }
 
 auth:bearer {

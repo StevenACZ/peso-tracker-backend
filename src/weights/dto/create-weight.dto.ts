@@ -38,4 +38,13 @@ export class CreateWeightDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    example: 'Notas de la foto',
+    description: 'Notas adicionales para la foto',
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  photoNotes?: string;
 }
