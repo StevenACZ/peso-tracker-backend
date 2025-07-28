@@ -1,177 +1,458 @@
-# Peso Tracker Backend
+# Peso Tracker API
 
-Backend API para la aplicación de seguimiento de peso construida con NestJS, Prisma, PostgreSQL y Supabase.
+A comprehensive weight tracking application backend built with NestJS, Prisma, and Supabase.
 
-## 🚀 Características
+## 🚀 Quick Start
 
-- **Autenticación JWT**: Registro y login de usuarios.
-- **Gestión de Pesos**: CRUD completo para registros de peso.
-- **Gestión de Metas**: Crear y gestionar objetivos de peso, incluyendo hitos.
-- **Gestión de Fotos**: Subida y almacenamiento de fotos en Supabase Storage, con asociación a registros de peso.
-- **Validación de Datos**: Validación robusta de datos de entrada utilizando `class-validator`.
-- **Seguridad**: Implementación de Helmet, CORS y Rate Limiting para proteger la aplicación.
-- **Health Checks**: Endpoints para monitorear el estado de la aplicación y sus dependencias (base de datos, Supabase).
-- **Documentación de API**: Documentación completa y detallada de la API con Swagger (OpenAPI).
-- **Desarrollo Local**: Configuración completa con Supabase local para desarrollo rápido.
+```bash
+# Install dependencies
+npm install
 
-## 🛠️ Tecnologías
+# Setup environment
+cp .env.development .env
+
+# Start Supabase (requires Docker)
+npx supabase start
+
+# Run database migrations
+npx prisma migrate dev
+
+# Start development server
+npm run start:dev
+```
+
+## 🌟 Features
+
+- **JWT Authentication**: Secure user registration and login
+- **Weight Management**: Complete CRUD for weight records with date constraints
+- **Photo Management**: One photo per weight with multiple sizes (thumbnail, medium, full)
+- **Goal System**: Hierarchical goal management with milestones
+- **Data Validation**: Robust input validation using class-validator
+- **Security**: Helmet, CORS, and Rate Limiting protection
+- **Health Monitoring**: Comprehensive health checks for app dependencies
+- **API Documentation**: Complete Swagger/OpenAPI documentation
+- **Local Development**: Streamlined Supabase local setup
+
+## 📖 API Documentation
+
+Base URL: `http://localhost:3000`
+
+### Authentication
+
+#### Register User
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+**Response:**
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "testuser",
+    "email": "test@example.com",
+    "createdAt": "2025-07-28T12:00:00.000Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Login
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+### Health Checks
+
+#### General Health
+```bash
+curl http://localhost:3000/health
+```
+
+#### Database Health
+```bash
+curl http://localhost:3000/health/database
+```
+
+#### Supabase Health
+```bash
+curl http://localhost:3000/health/supabase
+```
+
+### Weights Management
+
+> 🔐 **All weight endpoints require authentication**. Include the JWT token in the Authorization header.
+
+#### Create Weight Record
+```bash
+curl -X POST http://localhost:3000/weights \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "weight": 75.5,
+    "date": "2025-07-28",
+    "notes": "Morning weight after breakfast"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "weight": "75.5",
+  "date": "2025-07-28T00:00:00.000Z",
+  "notes": "Morning weight after breakfast",
+  "createdAt": "2025-07-28T12:00:00.000Z",
+  "updatedAt": "2025-07-28T12:00:00.000Z",
+  "photos": []
+}
+```
+
+#### Get All Weights
+```bash
+# Basic request
+curl http://localhost:3000/weights \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# With pagination and date filters
+curl "http://localhost:3000/weights?page=1&limit=10&startDate=2025-07-01&endDate=2025-07-31" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Get Weight by ID
+```bash
+curl http://localhost:3000/weights/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Get Weight Photo
+```bash
+curl http://localhost:3000/weights/1/photo \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "weightId": 1,
+  "notes": "Progress photo",
+  "thumbnailUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_thumbnail.jpg",
+  "mediumUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_medium.jpg",
+  "fullUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_full.jpg",
+  "createdAt": "2025-07-28T12:00:00.000Z",
+  "updatedAt": "2025-07-28T12:00:00.000Z"
+}
+```
+
+#### Update Weight
+```bash
+curl -X PATCH http://localhost:3000/weights/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "weight": 74.8,
+    "notes": "Updated weight measurement"
+  }'
+```
+
+#### Delete Weight
+```bash
+curl -X DELETE http://localhost:3000/weights/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Photos Management
+
+#### Upload Photo
+```bash
+curl -X POST http://localhost:3000/photos/upload \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "photo=@/path/to/your/image.jpg" \
+  -F "weightId=1" \
+  -F "notes=Progress photo"
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "weightId": 1,
+  "notes": "Progress photo",
+  "thumbnailUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_thumbnail.jpg",
+  "mediumUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_medium.jpg",
+  "fullUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_full.jpg",
+  "createdAt": "2025-07-28T12:00:00.000Z",
+  "updatedAt": "2025-07-28T12:00:00.000Z",
+  "weight": {
+    "id": 1,
+    "weight": "75.5",
+    "date": "2025-07-28T00:00:00.000Z"
+  }
+}
+```
+
+#### Get All Photos
+```bash
+# Get all user photos
+curl http://localhost:3000/photos \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Filter by weight ID
+curl "http://localhost:3000/photos?weightId=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# With pagination
+curl "http://localhost:3000/photos?page=1&limit=5" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Get Photo by ID
+```bash
+curl http://localhost:3000/photos/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Delete Photo
+```bash
+curl -X DELETE http://localhost:3000/photos/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Goals Management
+
+#### Create Goal
+```bash
+curl -X POST http://localhost:3000/goals \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "targetWeight": 70.0,
+    "targetDate": "2025-12-31",
+    "type": "main"
+  }'
+```
+
+#### Get All Goals
+```bash
+curl http://localhost:3000/goals \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Get Goal by ID
+```bash
+curl http://localhost:3000/goals/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Update Goal
+```bash
+curl -X PATCH http://localhost:3000/goals/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "targetWeight": 68.0,
+    "targetDate": "2025-11-30"
+  }'
+```
+
+#### Delete Goal
+```bash
+curl -X DELETE http://localhost:3000/goals/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 🛠️ Tech Stack
 
 - **Framework**: [NestJS](https://nestjs.com/)
 - **ORM**: [Prisma](https://www.prisma.io/)
-- **Base de Datos**: [PostgreSQL](https://www.postgresql.org/)
-- **Almacenamiento de Archivos**: [Supabase Storage](https://supabase.com/storage)
-- **Autenticación**: [JWT](https://jwt.io/)
-- **Validación**: [class-validator](https://github.com/typestack/class-validator), [class-transformer](https://github.com/typestack/class-transformer)
-- **Seguridad**: [Helmet](https://helmetjs.github.io/), [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS), [Throttler](https://docs.nestjs.com/security/rate-limiting)
-- **Procesamiento de Imágenes**: [Sharp](https://sharp.pixelplumbing.com/)
+- **Database**: [PostgreSQL](https://www.postgresql.org/)
+- **File Storage**: [Supabase Storage](https://supabase.com/storage)
+- **Authentication**: [JWT](https://jwt.io/)
+- **Validation**: [class-validator](https://github.com/typestack/class-validator), [class-transformer](https://github.com/typestack/class-transformer)
+- **Security**: [Helmet](https://helmetjs.github.io/), [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS), [Throttler](https://docs.nestjs.com/security/rate-limiting)
+- **Image Processing**: [Sharp](https://sharp.pixelplumbing.com/)
 
-## 📋 Requisitos Previos
+## 🛠️ Environment Variables
 
-- Node.js (v18 o superior)
-- npm/yarn/pnpm
-- Docker (para Supabase local)
-- Supabase CLI (`npm install -g supabase`)
+```env
+# Server Configuration
+NODE_ENV=development
+PORT=3000
 
-## 🔧 Instalación y Configuración
+# Database
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-### 🚀 Desarrollo Local (Súper Rápido)
+# Supabase (Local Development)
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_STORAGE_BUCKET=peso-tracker-photos
 
-1. **Clonar e instalar:**
+# JWT
+JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
+JWT_EXPIRES_IN=24h
 
-   ```bash
-   git clone https://github.com/your-username/peso-tracker-backend.git
-   cd peso-tracker-backend
-   npm install
-   ```
+# Security
+BCRYPT_SALT_ROUNDS=10
 
-2. **¡Iniciar todo de una vez!**
+# CORS
+FRONTEND_URL=http://localhost:3000
 
-   ```bash
-   npm run go
-   ```
-
-   **¡Eso es todo!** 🎉 Este comando mágico:
-   - ✅ Inicia Supabase local automáticamente
-   - ✅ Configura la base de datos con tu esquema
-   - ✅ Inicia el servidor de desarrollo
-   - ✅ Todo listo para desarrollar sin configuración adicional
-
-### 🔄 Comandos de Desarrollo
-
-- **`npm run go`** - Comando mágico: inicia todo automáticamente
-- **`npm run restart`** - Reinicia todo desde cero
-- **`npm run supabase:start`** - Solo inicia Supabase local
-- **`npm run supabase:stop`** - Detiene Supabase local
-- **`npm run db:studio:local`** - Abre Prisma Studio con BD local
-
-### 📝 Agregar Nuevas Tablas
-
-1. Modifica `prisma/schema.prisma`
-2. Ejecuta `npm run go` (actualiza automáticamente la BD)
-3. ¡Listo! Las nuevas tablas están disponibles
-
-### 🌐 URLs Locales
-
-- **API**: http://localhost:3000
-- **Swagger**: http://localhost:3000/api
-- **Supabase Studio**: http://127.0.0.1:54323
-- **Base de datos**: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-
-### ☁️ Configuración para Producción
-
-1. **Configurar variables de entorno:**
-
-   ```bash
-   cp .env.example .env.production
-   # Editar .env.production con tus credenciales de Supabase Cloud
-   ```
-
-2. **Iniciar en modo producción:**
-   ```bash
-   npm run prod
-   ```
-
-## 🔐 Variables de Entorno
-
-### Desarrollo Local
-
-El archivo `.env.development` ya está configurado con credenciales locales seguras:
-
-- **Supabase URL**: http://127.0.0.1:54321
-- **JWT Secret**: super-secret-jwt-token-with-at-least-32-characters-long
-- **Base de datos**: PostgreSQL local en Docker
-
-### Producción
-
-Configura `.env.production` con tus credenciales reales de Supabase Cloud.
-
-## 📚 Documentación de la API (Swagger)
-
-Una vez que la aplicación esté en funcionamiento, accede a la documentación:
-
-[http://localhost:3000/api](http://localhost:3000/api)
-
-La documentación incluye:
-
-- **Descripción**: Qué hace cada endpoint
-- **Parámetros**: Parámetros de ruta, consulta y cuerpo
-- **Ejemplos**: JSON de solicitudes y respuestas
-- **Esquemas**: Definiciones de DTOs
-
-## 🧪 Testing
-
-```bash
-npm test
+# Rate Limiting
+RATE_LIMIT_TTL=300
+RATE_LIMIT_LIMIT=1000
 ```
 
-## 🐳 Docker
+## 📊 Database Schema
 
-1. **Construir imagen:**
+### Users
+- `id`: Primary key
+- `username`: Unique username
+- `email`: Unique email address
+- `password`: Hashed password
+- `createdAt`, `updatedAt`: Timestamps
 
-   ```bash
-   docker build -t peso-tracker-backend .
-   ```
+### Weights
+- `id`: Primary key
+- `userId`: Foreign key to Users
+- `weight`: Decimal weight value
+- `date`: Date of measurement (unique per user)
+- `notes`: Optional notes
+- `createdAt`, `updatedAt`: Timestamps
 
-2. **Ejecutar contenedor:**
-   ```bash
-   docker run -p 3000:3000 --env-file .env peso-tracker-backend
-   ```
+### Photos
+- `id`: Primary key
+- `userId`: Foreign key to Users
+- `weightId`: Foreign key to Weights (unique - one photo per weight)
+- `notes`: Optional notes
+- `thumbnailUrl`, `mediumUrl`, `fullUrl`: Image URLs
+- `createdAt`, `updatedAt`: Timestamps
 
-## ❓ Preguntas Frecuentes
+### Goals
+- `id`: Primary key
+- `userId`: Foreign key to Users
+- `targetWeight`: Target weight
+- `targetDate`: Target date
+- `type`: Goal type (main, milestone)
+- `isAutoGenerated`: Boolean flag
+- `parentGoalId`: Self-referencing for goal hierarchy
+- `milestoneNumber`: Milestone order
+- `createdAt`, `updatedAt`: Timestamps
 
-### ¿Cómo funciona el desarrollo local vs producción?
+## 🔧 Key Features
 
-- **Local**: Base de datos PostgreSQL en Docker, completamente aislada
-- **Producción**: Supabase Cloud con tus credenciales reales
-- **Cambio automático**: Los scripts manejan el cambio de entorno automáticamente
+### Photo Management
+- **One photo per weight**: Database constraint ensures data integrity
+- **Multiple sizes**: Automatic generation of thumbnail, medium, and full-size images
+- **Supabase Storage**: Secure cloud storage with public URLs
+- **Direct weight access**: Get photo directly via weight ID
 
-### ¿Qué pasa si reinicio mi computadora?
+### Weight Tracking
+- **Date uniqueness**: One weight record per date per user
+- **Photo integration**: Seamless photo association
+- **Pagination**: Efficient data retrieval with pagination
+- **Date filtering**: Query weights by date range
 
-Solo ejecuta `npm run go` nuevamente. Docker iniciará automáticamente.
+### Authentication & Security
+- **JWT tokens**: Secure authentication with configurable expiration
+- **Route protection**: All user data endpoints require authentication
+- **User isolation**: Users can only access their own data
+- **Password hashing**: Bcrypt for secure password storage
 
-### ¿Los datos se comparten entre local y producción?
+### Goal System
+- **Hierarchical goals**: Support for main goals and milestones
+- **Auto-generation**: System can create milestone goals
+- **Flexible targeting**: Date and weight-based goals
 
-No, son bases de datos completamente separadas y seguras.
+## 🚨 Important Notes
 
-### ¿Puedo usar el comando corto para cambios en el esquema?
+### Photo Constraints
+- Only **one photo per weight record** is allowed
+- Attempting to upload multiple photos will return a 400 error
+- Delete existing photo before uploading a new one
 
-Sí, `npm run go` detecta cambios en `prisma/schema.prisma` y actualiza la BD automáticamente.
+### Storage Setup
+Before using photo functionality, ensure the Supabase storage bucket exists:
 
-## 🚨 Notas Importantes
+1. Open Supabase Dashboard: `http://127.0.0.1:54323`
+2. Go to Storage > Create bucket
+3. Name: `peso-tracker-photos`
+4. Mark as **Public bucket**
+5. Save
 
-- **Docker debe estar ejecutándose** para Supabase local
-- **Puertos 54321-54324** deben estar disponibles
-- **Usa siempre los scripts npm** para cambio de entornos
-- **Las credenciales locales son seguras** para compartir en el equipo
+### Date Constraints
+- Only **one weight record per date per user**
+- Dates should be in ISO format: `YYYY-MM-DD`
+- Attempting duplicate dates will return a 409 error
 
-## 🤝 Contribuciones
+## 🌐 Development URLs
 
-1. Fork del proyecto
-2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'Añadir nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+- **API**: http://localhost:3000
+- **Swagger Documentation**: http://localhost:3000/api
+- **Supabase Studio**: http://127.0.0.1:54323
+- **Database**: postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-## 📄 Licencia
+## 🔍 Testing
 
-Este proyecto está bajo la [Licencia MIT](LICENSE).
+The project includes Bruno API tests in `/api-tests/` directory for comprehensive endpoint testing.
+
+```bash
+# Run unit tests
+npm run test
+
+# Run e2e tests
+npm run test:e2e
+
+# Run tests with coverage
+npm run test:cov
+```
+
+## 📝 Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development with hot reload
+npm run start:dev
+
+# Build for production
+npm run build
+
+# Run production
+npm run start:prod
+
+# Format code
+npm run format
+
+# Lint code
+npm run lint
+```
+
+## 🤝 Contributing
+
+1. Follow existing code patterns and conventions
+2. Use the existing DTOs and validation rules
+3. Maintain the one-photo-per-weight constraint
+4. Update documentation for new endpoints
+5. Add appropriate error handling and validation
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
