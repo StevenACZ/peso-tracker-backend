@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateWeightDto } from './dto/create-weight.dto';
 import { UpdateWeightDto } from './dto/update-weight.dto';
+import { GetWeightsQueryDto } from './dto/get-weights-query.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -47,48 +48,22 @@ export class WeightsController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los registros de peso del usuario' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Número de página',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Número de registros por página',
-  })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    type: String,
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)',
-  })
-  @ApiQuery({
-    name: 'endDate',
-    required: false,
-    type: String,
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)',
-  })
   @ApiResponse({
     status: 200,
     description: 'Lista de registros de peso.',
   })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   findAll(
     @CurrentUser() user: { id: number },
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query() query: GetWeightsQueryDto,
   ) {
     return this.weightsService.findAll(
       user.id,
-      page,
-      limit,
-      startDate,
-      endDate,
+      query.page,
+      query.limit,
+      query.startDate,
+      query.endDate,
     );
   }
 

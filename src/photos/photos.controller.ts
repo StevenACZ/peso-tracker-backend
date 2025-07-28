@@ -18,6 +18,7 @@ import { PhotosService } from './photos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreatePhotoDto } from './dto/create-photo.dto';
+import { GetPhotosQueryDto } from './dto/get-photos-query.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -76,37 +77,17 @@ export class PhotosController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las fotos del usuario' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Número de página',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Número de fotos por página',
-  })
-  @ApiQuery({
-    name: 'weightId',
-    required: false,
-    type: Number,
-    description: 'Filtrar fotos por ID de registro de peso',
-  })
   @ApiResponse({
     status: 200,
     description: 'Lista de fotos.',
   })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   findAll(
     @CurrentUser() user: { id: number },
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('weightId') weightId?: string,
+    @Query() query: GetPhotosQueryDto,
   ) {
-    const weightIdNum = weightId ? parseInt(weightId) : undefined;
-    return this.photosService.findAll(user.id, page, limit, weightIdNum);
+    return this.photosService.findAll(user.id, query.page, query.limit, query.weightId);
   }
 
   @Get(':id')
