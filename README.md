@@ -25,8 +25,11 @@ npm run start:dev
 
 - **JWT Authentication**: Secure user registration and login
 - **Weight Management**: Complete CRUD for weight records with date constraints
-- **Photo Management**: One photo per weight with multiple sizes (thumbnail, medium, full)
-- **Goal System**: Hierarchical goal management with milestones
+- **📊 Temporal Pagination**: Advanced time-based navigation for charts (NEW)
+- **📋 Table Pagination**: Traditional record-based pagination for data tables (NEW)
+- **Photo Management**: One photo per weight with multiple sizes (consolidated into weights)
+- **🎯 Dashboard Analytics**: Overview and statistics endpoints (NEW)
+- **Goal System**: Simplified goal management system
 - **Data Validation**: Robust input validation using class-validator
 - **Security**: Helmet, CORS, and Rate Limiting protection
 - **Health Monitoring**: Comprehensive health checks for app dependencies
@@ -94,8 +97,18 @@ curl http://localhost:3000/health/supabase
 
 > 🔐 **All weight endpoints require authentication**. Include the JWT token in the Authorization header.
 
-#### Create Weight Record
+#### Create Weight Record (with optional photo)
 ```bash
+# With photo
+curl -X POST http://localhost:3000/weights \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "weight=75.5" \
+  -F "date=2025-07-28" \
+  -F "notes=Morning weight after breakfast" \
+  -F "photo=@/path/to/your/image.jpg" \
+  -F "photoNotes=Progress photo"
+
+# Without photo  
 curl -X POST http://localhost:3000/weights \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -116,11 +129,87 @@ curl -X POST http://localhost:3000/weights \
   "notes": "Morning weight after breakfast",
   "createdAt": "2025-07-28T12:00:00.000Z",
   "updatedAt": "2025-07-28T12:00:00.000Z",
-  "photos": []
+  "photo": {
+    "id": 1,
+    "thumbnailUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_thumbnail.jpg",
+    "mediumUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_medium.jpg",
+    "fullUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_full.jpg"
+  }
 }
 ```
 
-#### Get All Weights
+#### 📊 Get Chart Data (NEW - Temporal Pagination)
+Navigate through complete time periods for chart visualization:
+
+```bash
+# Current month
+curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=0" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Previous month  
+curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Current year
+curl "http://localhost:3000/weights/chart-data?timeRange=1year&page=0" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Parameters:**
+- `timeRange`: `1week`, `1month`, `3months`, `6months`, `1year`
+- `page`: Period index (0 = most recent, 1 = previous, etc.)
+
+**Response:**
+```json
+{
+  "data": [
+    {"weight": 72.5, "date": "2024-01-15T00:00:00.000Z"}
+  ],
+  "pagination": {
+    "currentPeriod": "Enero 2025",
+    "hasNext": true,
+    "hasPrevious": true,
+    "totalPeriods": 25,
+    "currentPage": 5
+  }
+}
+```
+
+#### 📋 Get Paginated Data (NEW - Table Pagination)
+Traditional record-based pagination for table views:
+
+```bash
+# First page, 5 records
+curl "http://localhost:3000/weights/paginated?page=1&limit=5" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Second page, 10 records
+curl "http://localhost:3000/weights/paginated?page=2&limit=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "weight": 72.5,
+      "date": "2024-01-15T00:00:00.000Z",
+      "notes": "Morning weight",
+      "hasPhoto": true
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 25,
+    "totalPages": 5
+  }
+}
+```
+
+#### Get All Weights (Legacy endpoint)
 ```bash
 # Basic request
 curl http://localhost:3000/weights \
@@ -175,63 +264,29 @@ curl -X DELETE http://localhost:3000/weights/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### Photos Management
+### 🎯 Dashboard Analytics (NEW)
 
-#### Upload Photo
+Get aggregated data and statistics:
+
+#### Get Dashboard Statistics
 ```bash
-curl -X POST http://localhost:3000/photos/upload \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -F "photo=@/path/to/your/image.jpg" \
-  -F "weightId=1" \
-  -F "notes=Progress photo"
+curl http://localhost:3000/dashboard/stats \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-**Response:**
-```json
-{
-  "id": 1,
-  "userId": 1,
-  "weightId": 1,
-  "notes": "Progress photo",
-  "thumbnailUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_thumbnail.jpg",
-  "mediumUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_medium.jpg",
-  "fullUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/1753669464663_full.jpg",
-  "createdAt": "2025-07-28T12:00:00.000Z",
-  "updatedAt": "2025-07-28T12:00:00.000Z",
-  "weight": {
-    "id": 1,
-    "weight": "75.5",
-    "date": "2025-07-28T00:00:00.000Z"
-  }
-}
-```
-
-#### Get All Photos
+#### Get Dashboard Overview
 ```bash
-# Get all user photos
-curl http://localhost:3000/photos \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-
-# Filter by weight ID
-curl "http://localhost:3000/photos?weightId=1" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-
-# With pagination
-curl "http://localhost:3000/photos?page=1&limit=5" \
+curl http://localhost:3000/dashboard/overview \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-#### Get Photo by ID
-```bash
-curl http://localhost:3000/photos/1 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+### Photos Management (Consolidated)
 
-#### Delete Photo
-```bash
-curl -X DELETE http://localhost:3000/photos/1 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+> 📝 **Note**: Photo management has been consolidated into the weights module. Photos are now managed through weight endpoints with a one-photo-per-weight constraint.
+
+- **Upload photos**: Use the weight creation/update endpoints with photo form data
+- **Get photos**: Access photos through weight endpoints (`/weights/:id/photo`)
+- **Delete photos**: Photos are deleted when their associated weight is deleted
 
 ### Goals Management
 
@@ -382,10 +437,17 @@ RATE_LIMIT_LIMIT=1000
 
 ## 🚨 Important Notes
 
+### ⏰ Temporal Pagination (NEW)
+- **Chart Data**: Uses 0-based page indexing (0 = most recent period)
+- **Table Data**: Uses 1-based page indexing (1 = first page)
+- **Period Navigation**: `hasNext`/`hasPrevious` indicate available periods
+- **Period Labels**: Human-readable period descriptions in Spanish
+
 ### Photo Constraints
-- Only **one photo per weight record** is allowed
-- Attempting to upload multiple photos will return a 400 error
-- Delete existing photo before uploading a new one
+- Only **one photo per weight record** is allowed (database constraint)
+- Photos are now managed through weight endpoints (consolidated)
+- Uploading to existing weight replaces the previous photo
+- Photos support three sizes: thumbnail (150x150), medium (400x400), full (800x800)
 
 ### Storage Setup
 Before using photo functionality, ensure the Supabase storage bucket exists:
@@ -397,9 +459,14 @@ Before using photo functionality, ensure the Supabase storage bucket exists:
 5. Save
 
 ### Date Constraints
-- Only **one weight record per date per user**
+- Only **one weight record per date per user** (database constraint)
 - Dates should be in ISO format: `YYYY-MM-DD`
 - Attempting duplicate dates will return a 409 error
+
+### API Changes
+- **Photos module removed**: Functionality moved to weights module
+- **Dashboard module added**: New analytics endpoints
+- **Enhanced validation**: Better error handling and type safety
 
 ## 🌐 Development URLs
 

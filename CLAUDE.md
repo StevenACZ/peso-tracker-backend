@@ -114,27 +114,76 @@ model Goal {
 - `GET /health/supabase` - Supabase connectivity
 
 ### Weights (Protected)
-- `POST /weights` - Create weight record
+- `POST /weights` - Create weight record with optional photo
 - `GET /weights` - List weights (with pagination & date filters)
+- `GET /weights/chart-data` - **NEW**: Temporal pagination for charts (periods: week/month/quarter/semester/year)
+- `GET /weights/paginated` - **NEW**: Traditional pagination for tables
 - `GET /weights/:id` - Get specific weight
 - `GET /weights/:id/photo` - Get photo for specific weight
-- `PATCH /weights/:id` - Update weight
+- `PATCH /weights/:id` - Update weight with optional photo
 - `DELETE /weights/:id` - Delete weight
 
-### Photos (Protected)
-- `POST /photos/upload` - Upload photo (multipart/form-data)
-- `GET /photos` - List photos (with pagination & weight filter)
-- `GET /photos/:id` - Get specific photo
-- `DELETE /photos/:id` - Delete photo
+### Dashboard (Protected) - **NEW MODULE**
+- `GET /dashboard/stats` - Get dashboard statistics
+- `GET /dashboard/overview` - Get overview data
 
 ### Goals (Protected)
 - `POST /goals` - Create goal
 - `GET /goals` - List goals
-- `GET /goals/:id` - Get specific goal
 - `PATCH /goals/:id` - Update goal
 - `DELETE /goals/:id` - Delete goal
 
+### Photos Management
+**Note**: Photo endpoints have been consolidated into the weights module. Photos are now managed through weight endpoints with one-photo-per-weight constraint.
+
 ## Key Business Logic
+
+### Temporal Pagination System (NEW)
+The API now implements a sophisticated temporal pagination system for chart data:
+
+#### Chart Data Endpoint (`/weights/chart-data`)
+- **Purpose**: Navigate through complete time periods for chart visualization
+- **Parameters**: 
+  - `timeRange`: Period type (`1week`, `1month`, `3months`, `6months`, `1year`)
+  - `page`: Period index (0 = most recent, 1 = previous, etc.)
+- **Response Format**:
+```json
+{
+  "data": [{"weight": 72.5, "date": "2024-01-15T00:00:00.000Z"}],
+  "pagination": {
+    "currentPeriod": "Enero 2025",
+    "hasNext": true,
+    "hasPrevious": true,
+    "totalPeriods": 25,
+    "currentPage": 5
+  }
+}
+```
+
+#### Paginated Data Endpoint (`/weights/paginated`)
+- **Purpose**: Traditional record-based pagination for table views
+- **Parameters**: 
+  - `page`: Page number (1-based)
+  - `limit`: Records per page (1-50)
+- **Response Format**:
+```json
+{
+  "data": [{"id": 1, "weight": 72.5, "date": "...", "notes": "...", "hasPhoto": true}],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 25,
+    "totalPages": 5
+  }
+}
+```
+
+#### Period Calculation Logic
+- **Week**: Sunday to Saturday periods
+- **Month**: Full calendar months
+- **Quarter**: 3-month periods (Q1, Q2, Q3, Q4)
+- **Semester**: 6-month periods (S1, S2)
+- **Year**: Full calendar years
 
 ### Photo Management
 1. **One Photo Per Weight**: Database constraint ensures integrity
@@ -205,21 +254,33 @@ src/
 ├── auth/              # Authentication module
 ├── common/            # Shared decorators, guards, etc.
 ├── config/            # Configuration files
-├── goals/             # Goal management
+├── dashboard/         # NEW: Dashboard module for analytics
+├── goals/             # Goal management (simplified)
 ├── health/            # Health check endpoints
-├── photos/            # Photo management
 ├── prisma/            # Prisma service
 ├── storage/           # Supabase storage service
-├── weights/           # Weight tracking
+├── weights/           # Weight tracking (now includes photo management)
+│   ├── dto/
+│   │   ├── get-chart-data-query.dto.ts      # NEW: Chart pagination
+│   │   └── get-paginated-query.dto.ts       # NEW: Table pagination
+│   └── weights.service.ts                   # Enhanced with temporal logic
 ├── app.module.ts      # Main app module
 └── main.ts           # Application entry point
 
 prisma/
-└── schema.prisma     # Database schema
+└── schema.prisma     # Database schema (updated constraints)
 
 api-tests/            # Bruno API tests
-└── Peso Tracker API/
+├── Peso Tracker API/
+│   ├── Dashboard/     # NEW: Dashboard tests
+│   ├── Weights/       # Updated weight tests
+│   └── Goals/         # Simplified goal tests
 ```
+
+**Major Changes**:
+- **Photos module removed**: Functionality consolidated into weights module
+- **Dashboard module added**: New analytics and overview endpoints
+- **Enhanced DTOs**: New pagination query objects for different use cases
 
 ## Environment Configuration
 
@@ -250,6 +311,18 @@ npx prisma migrate reset      # Reset database
 npx prisma generate           # Regenerate Prisma client
 npm run lint                  # Code linting
 npm run format                # Code formatting
+```
+
+### Testing New Features
+```bash
+# Test chart data temporal pagination
+curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=0"
+
+# Test table pagination
+curl "http://localhost:3000/weights/paginated?page=1&limit=5"
+
+# Test dashboard endpoints
+curl "http://localhost:3000/dashboard/stats"
 ```
 
 ## Storage Configuration
