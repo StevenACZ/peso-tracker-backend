@@ -1,485 +1,368 @@
 # Peso Tracker Backend - Claude Context
 
-## Project Overview
+## Stack & Architecture
+- **NestJS** + **Prisma** + **Supabase** (PostgreSQL + Storage)
+- **JWT Auth** + **class-validator** + **Sharp** (image processing)
+- **One DB constraint:** One weight per date per user, one photo per weight
 
-This is a **Weight Tracking API** built with NestJS, Prisma, and Supabase. The application allows users to track their weight progress over time with photos and goal management.
+## Quick Command Reference
+```bash
+npm run go              # Start everything (daily use)
+npm run go:reset        # Fresh start with clean DB
+npm run dev:reset       # Only reset DB
+npm run lint            # Must run before commits
+```
 
-## Core Architecture
+## Endpoint Implementation Templates
 
-### Framework & Stack
-- **Backend**: NestJS (Node.js framework)
-- **Database**: PostgreSQL with Prisma ORM
-- **File Storage**: Supabase Storage
-- **Authentication**: JWT tokens
-- **Image Processing**: Sharp (multiple sizes: thumbnail, medium, full)
-- **Validation**: class-validator & class-transformer
-- **Documentation**: Swagger/OpenAPI
+### Standard Controller Pattern
+```typescript
+@ApiTags('ModuleName')
+@ApiBearerAuth()
+@Controller('endpoint')
+@UseGuards(JwtAuthGuard)
+export class ModuleController {
+  constructor(private readonly service: ModuleService) {}
 
-### Development Environment
-- **Local Database**: PostgreSQL running in Docker via Supabase CLI
-- **Local Storage**: Supabase Storage (local instance)
-- **Environment**: Development uses `.env.development` file
-- **URLs**: 
-  - API: http://localhost:3000
-  - Swagger: http://localhost:3000/api
-  - Supabase Studio: http://127.0.0.1:54323
+  @Post()
+  @ApiOperation({ summary: 'Create resource' })
+  create(@CurrentUser() user: { id: number }, @Body() dto: CreateDto) {
+    return this.service.create(user.id, dto);
+  }
 
-## Database Schema & Business Rules
+  @Get(':id')
+  @ApiOperation({ summary: 'Get by ID' })
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
+    return this.service.findOne(id, user.id);
+  }
 
-### Users Table
-```prisma
-model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  email     String   @unique
-  password  String   // Bcrypt hashed
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  weights Weight[]
-  goals   Goal[]
-  photos  Photo[]
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update resource' })
+  update(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }, @Body() dto: UpdateDto) {
+    return this.service.update(id, user.id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete resource' })
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { id: number }) {
+    return this.service.remove(id, user.id);
+  }
 }
 ```
 
-### Weights Table
+### Standard Service Pattern
+```typescript
+@Injectable()
+export class ModuleService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(userId: number, dto: CreateDto) {
+    return this.prisma.model.create({
+      data: { userId, ...dto }
+    });
+  }
+
+  async findOne(id: number, userId: number) {
+    const record = await this.prisma.model.findFirst({
+      where: { id, userId }
+    });
+    if (!record) throw new NotFoundException('Resource not found');
+    return record;
+  }
+
+  async update(id: number, userId: number, dto: UpdateDto) {
+    await this.findOne(id, userId); // Verify ownership
+    return this.prisma.model.update({
+      where: { id },
+      data: dto
+    });
+  }
+
+  async remove(id: number, userId: number) {
+    await this.findOne(id, userId); // Verify ownership
+    return this.prisma.model.delete({ where: { id } });
+  }
+}
+```
+
+### Standard DTO Pattern
+```typescript
+export class CreateModuleDto {
+  @ApiProperty({ example: 'value', description: 'Field description' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  field: string;
+
+  @ApiPropertyOptional({ example: 'optional value' })
+  @IsOptional()
+  @IsString()
+  optionalField?: string;
+}
+
+export class UpdateModuleDto extends PartialType(CreateModuleDto) {}
+```
+
+## Critical Database Constraints
+
+- **Weight:** `@@unique([userId, date])` - One weight per date per user
+- **Photo:** `weightId Int @unique` - One photo per weight
+- **Goal:** Simple model, one active goal per user
+
+## Current Schema (Key Fields Only)
 ```prisma
 model Weight {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  weight    Decimal  @db.Decimal(5, 1)  // Max 999.9 kg
-  date      DateTime @db.Date
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User    @relation(fields: [userId], references: [id])
-  photos Photo[]
-
-  @@unique([userId, date])  // One weight per date per user
+  id     Int     @id @default(autoincrement())
+  userId Int
+  weight Decimal @db.Decimal(5, 2)
+  date   DateTime @db.Date
+  notes  String?
+  photos Photo?
+  @@unique([userId, date])
 }
-```
 
-**Key Constraint**: Only ONE weight record per user per date.
-
-### Photos Table
-```prisma
 model Photo {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  weightId    Int      @unique  // One photo per weight
-  notes       String?
-  thumbnailUrl String   // 150x150px
-  mediumUrl   String   // 400x400px
-  fullUrl     String   // 800x800px
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id])
-  weight Weight @relation(fields: [weightId], references: [id])
+  id           Int    @id @default(autoincrement())
+  userId       Int
+  weightId     Int    @unique
+  thumbnailUrl String // 150x150px
+  mediumUrl    String // 400x400px  
+  fullUrl      String // 800x800px
 }
-```
 
-**Key Constraint**: Only ONE photo per weight record (enforced at DB level).
-
-### Goals Table
-```prisma
 model Goal {
   id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
-  targetWeight Decimal  @map("target_weight") @db.Decimal(5, 2)
-  targetDate   DateTime @map("target_date") @db.Date
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("goals")
+  userId       Int
+  targetWeight Decimal  @db.Decimal(5, 2)
+  targetDate   DateTime @db.Date
 }
 ```
 
-**Simplified Design**: Goals now follow a simple single-goal-per-user model. No hierarchies, milestones, or complex relationships - just straightforward target weight and date tracking.
+## Endpoint Quick Reference
 
-## API Endpoints Summary
+**Auth (Public):** `POST /auth/{register,login}`
+**Health (Public):** `GET /health/{,database,supabase}`
+**Weights (Protected):** `POST,GET,PATCH,DELETE /weights` + `/weights/{chart-data,paginated,progress,:id,:id/photo}`
+**Goals (Protected):** Standard CRUD `/goals`
+**Dashboard (Protected):** `GET /dashboard`
 
-### Authentication (Public)
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-
-### Health Checks (Public)
-- `GET /health` - General health status
-- `GET /health/database` - Database connectivity
-- `GET /health/supabase` - Supabase connectivity
-
-### Weights (Protected)
-- `POST /weights` - Create weight record with optional photo
-- `GET /weights/chart-data` - **ENHANCED**: Smart temporal pagination for charts with minimum data requirements
-- `GET /weights/paginated` - Traditional pagination for tables (ordered by newest first)
-- `GET /weights/:id` - Get specific weight
-- `GET /weights/:id/photo` - Get photo for specific weight
-- `PATCH /weights/:id` - Update weight with optional photo
-- `DELETE /weights/:id` - Delete weight
-
-### Dashboard (Protected) - **NEW MODULE**
-- `GET /dashboard/stats` - Get dashboard statistics
-- `GET /dashboard/overview` - Get overview data
-
-### Goals (Protected)
-- `POST /goals` - Create goal (one active goal per user)
-- `GET /goals/:id` - Get goal by ID
-- `PATCH /goals/:id` - Update goal
-- `DELETE /goals/:id` - Delete goal
-
-### Photos Management
-**Note**: Photo endpoints have been consolidated into the weights module. Photos are now managed through weight endpoints with one-photo-per-weight constraint.
-
-## Key Business Logic
-
-### Smart Temporal Pagination System (**ENHANCED**)
-The API implements an intelligent temporal pagination system for chart data with minimum data requirements:
-
-#### Chart Data Endpoint (`/weights/chart-data`) - **ENHANCED**
-- **Purpose**: Navigate through periods that contain meaningful chart data (≥2 data points)
-- **Parameters**: 
-  - `timeRange`: Period type (`all`, `1month`, `3months`, `6months`, `1year`)
-  - `page`: Period index (0 = most recent, 1 = previous, etc.)
-- **Key Features**:
-  - **Smart Filtering**: Only shows periods with ≥2 data points (required for line charts)
-  - **'all' Option**: Shows complete dataset when user has ≥2 total records
-  - **No Empty Pages**: Eliminates navigation through periods without data
-- **Response Format**:
-```json
-{
-  "data": [{"weight": 72.5, "date": "2024-01-15T00:00:00.000Z"}],
-  "pagination": {
-    "currentPeriod": "Enero 2025",
-    "hasNext": true,
-    "hasPrevious": true,
-    "totalPeriods": 8,
-    "currentPage": 2
-  }
-}
-```
-
-#### Paginated Data Endpoint (`/weights/paginated`)
-- **Purpose**: Traditional record-based pagination for table views
-- **Parameters**: 
-  - `page`: Page number (1-based)
-  - `limit`: Records per page (1-50)
-- **Response Format**:
-```json
-{
-  "data": [{"id": 1, "weight": 72.5, "date": "...", "notes": "...", "hasPhoto": true}],
-  "pagination": {
-    "page": 1,
-    "limit": 5,
-    "total": 25,
-    "totalPages": 5
-  }
-}
-```
-
-#### Period Calculation Logic (**UPDATED**)
-- **All**: Complete dataset (minimum 2 records required)
-- **Month**: Full calendar months (only months with ≥2 records shown)
-- **Quarter**: 3-month periods (Q1, Q2, Q3, Q4) (only quarters with ≥2 records shown)
-- **Semester**: 6-month periods (S1, S2) (only semesters with ≥2 records shown)
-- **Year**: Full calendar years (only years with ≥2 records shown)
-
-**Key Improvement**: Eliminated weekly option and empty period navigation. Now only periods containing sufficient data for meaningful charts are displayed.
-
-### Photo Management
-1. **One Photo Per Weight**: Database constraint ensures integrity
-2. **Multiple Sizes**: Automatic generation using Sharp
-   - Thumbnail: 150x150px
-   - Medium: 400x400px
-   - Full: 800x800px
-3. **Storage**: Supabase Storage with public URLs
-4. **Path Structure**: `{userId}/{weightId}/{timestamp}_{size}.{ext}`
-
-### Weight Tracking
-1. **Date Uniqueness**: One weight per date per user
-2. **Decimal Precision**: Weight stored as Decimal(5,1) for accuracy
-3. **Photo Integration**: Weight records include associated photos
-4. **Pagination**: Efficient data retrieval with page/limit
-
-### Authentication & Security
-1. **JWT Tokens**: Configurable expiration (default 24h)
-2. **Route Protection**: All user data requires authentication
-3. **User Isolation**: Users can only access their own data
-4. **Password Security**: Bcrypt hashing with configurable rounds
-
-## Common Development Patterns
-
-### Error Handling
+## File Upload Pattern (Weights Only)
 ```typescript
-// Standard error responses
+@UseInterceptors(FileInterceptor('photo'))
+@ApiConsumes('multipart/form-data')
+create(
+  @CurrentUser() user: { id: number },
+  @Body() dto: CreateWeightDto,
+  @UploadedFile() file?: Express.Multer.File,
+) {
+  return this.service.create(user.id, dto, file);
+}
+```
+
+**Storage Service Usage:**
+```typescript
+// In service
+constructor(
+  private readonly prisma: PrismaService,
+  private readonly storage: StorageService,
+) {}
+
+if (file) {
+  const photoUrls = await this.storage.uploadPhoto(file, userId, weightId);
+  // Returns: { thumbnailUrl, mediumUrl, fullUrl }
+}
+```
+
+## Business Logic Patterns
+
+### Smart Pagination (Chart Data)
+- **Chart endpoint:** Only returns periods with ≥2 data points
+- **Table endpoint:** Traditional page/limit pagination
+- **timeRange:** `all|1month|3months|6months|1year`
+- **Key feature:** No empty periods in chart navigation
+
+### Error Handling Standards
+```typescript
+// Standard patterns:
 throw new NotFoundException('Resource not found');
-throw new ForbiddenException('Access denied');
 throw new BadRequestException('Invalid input');
 throw new ConflictException('Duplicate entry');
+throw new ForbiddenException('Access denied');
 ```
 
-### Pagination Pattern
+### Validation Patterns
 ```typescript
-async findAll(userId: number, page: number = 1, limit: number = 10) {
+// Weight validation
+@IsNumber({ maxDecimalPlaces: 2 })
+@Min(1)
+@Max(999.99)
+weight: number;
+
+// Date validation
+@IsDateString()
+@IsNotEmpty()
+date: string;
+
+// File validation (handled by multer + storage service)
+```
+
+### Photo Processing (StorageService)
+- **Auto-sizes:** 150px, 400px, 800px (thumbnail, medium, full)
+- **Path:** `{userId}/{weightId}/{timestamp}_{size}.{ext}`
+- **Constraint:** One photo per weight (DB level)
+- **Cleanup:** Deletes old files when weight deleted/updated
+
+## Adding New Endpoints - Step by Step
+
+### 1. Create DTO (src/module/dto/)
+```typescript
+export class CreateExampleDto {
+  @ApiProperty({ example: 'value', description: 'Clear description' })
+  @IsString()
+  @IsNotEmpty()
+  field: string;
+}
+```
+
+### 2. Add Controller Method
+```typescript
+@Post()
+@ApiOperation({ summary: 'Create example' })
+@ApiResponse({ status: 201, description: 'Created successfully.' })
+@ApiResponse({ status: 400, description: 'Invalid input.' })
+create(@CurrentUser() user: { id: number }, @Body() dto: CreateExampleDto) {
+  return this.service.create(user.id, dto);
+}
+```
+
+### 3. Implement Service Logic
+```typescript
+async create(userId: number, dto: CreateExampleDto) {
+  // Business validation if needed
+  return this.prisma.example.create({
+    data: { userId, ...dto }
+  });
+}
+```
+
+### 4. Test in Bruno (api-tests/)
+- Create new request
+- Test success and error cases
+- Update environment variables if needed
+
+## Common Patterns Reference
+
+### Pagination Implementation
+```typescript
+// Standard pagination
+async findPaginated(userId: number, page: number = 1, limit: number = 10) {
   const skip = (page - 1) * limit;
-  
   const [data, total] = await Promise.all([
-    this.prisma.model.findMany({ skip, take: limit }),
-    this.prisma.model.count()
+    this.prisma.model.findMany({ where: { userId }, skip, take: limit }),
+    this.prisma.model.count({ where: { userId } })
   ]);
-
-  return {
-    data,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
-  };
+  return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 ```
 
-### Authentication Guard Usage
+### User Ownership Verification
 ```typescript
-@UseGuards(JwtAuthGuard)
-@Controller('protected-resource')
-export class ProtectedController {
-  @Get()
-  getData(@CurrentUser() user: { id: number }) {
-    // user.id is automatically extracted from JWT
-    return this.service.findByUserId(user.id);
-  }
+// Always verify ownership for protected resources
+async findOne(id: number, userId: number) {
+  const record = await this.prisma.model.findFirst({ where: { id, userId } });
+  if (!record) throw new NotFoundException('Resource not found');
+  return record;
 }
 ```
 
-## File Structure
-
+## Module Structure (When Adding New Module)
 ```
-src/
-├── auth/              # Authentication module
-├── common/            # Shared decorators, guards, etc.
-├── config/            # Configuration files
-├── dashboard/         # NEW: Dashboard module for analytics
-├── goals/             # Simple goal management (one goal per user)
-├── health/            # Health check endpoints
-├── prisma/            # Prisma service
-├── storage/           # Supabase storage service
-├── weights/           # Weight tracking (now includes photo management)
-│   ├── dto/
-│   │   ├── get-chart-data-query.dto.ts      # NEW: Chart pagination
-│   │   └── get-paginated-query.dto.ts       # NEW: Table pagination
-│   └── weights.service.ts                   # Enhanced with temporal logic
-├── app.module.ts      # Main app module
-└── main.ts           # Application entry point
-
-prisma/
-└── schema.prisma     # Database schema (updated constraints)
-
-api-tests/            # Bruno API tests
-├── Peso Tracker API/
-│   ├── Dashboard/     # NEW: Dashboard tests
-│   ├── Weights/       # Updated weight tests
-│   └── Goals/         # Simple goal tests
+src/new-module/
+├── dto/
+│   ├── create-new.dto.ts
+│   ├── update-new.dto.ts    
+│   └── query-new.dto.ts     # For GET params
+├── new-module.controller.ts
+├── new-module.service.ts
+└── new-module.module.ts
 ```
 
-**Major Changes**:
-- **Photos module removed**: Functionality consolidated into weights module
-- **Dashboard module added**: New analytics and overview endpoints
-- **Enhanced DTOs**: New pagination query objects for different use cases
+## Key Services to Inject
+```typescript
+constructor(
+  private readonly prisma: PrismaService,        // Always needed
+  private readonly storage: StorageService,       // For file uploads
+) {}
+```
 
-## Environment Configuration
+## Testing New Endpoints
+1. Add request to `/api-tests/` in Bruno
+2. Test auth endpoints first to get token
+3. Test success cases, then error cases
+4. Check Swagger: `http://localhost:3000/api`
 
-### Local Development
-- Uses `.env.development` with local Supabase instance
-- Database: PostgreSQL in Docker (port 54322)
-- Storage: Local Supabase Storage (port 54321)
-- No external dependencies required
+## Important URLs
+- **API:** http://localhost:3000
+- **Swagger:** http://localhost:3000/api
+- **Supabase Studio:** http://127.0.0.1:54323
+- **DB Connection:** postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-### Production
-- Uses `.env.production` with Supabase Cloud
-- Real database and storage credentials required
+## Quick Fixes for Common Issues
 
-## Development Workflow
-
-### Setup Commands
+### Database Connection Failed
 ```bash
-npm install                    # Install dependencies
-npx supabase start            # Start local Supabase
-npx prisma migrate dev        # Apply migrations
-npm run start:dev             # Start development server
+npx supabase status  # Check if running
+npx supabase start   # If not running
+npm run dev:reset    # If DB corrupted
 ```
 
-### Development Scripts
-
-#### Quick Start Commands
+### Photo Upload Fails
 ```bash
-# Fast development start (recommended for daily use)
-npm run go                     # Start Supabase + push schema + start app
-
-# Clean start with database reset (when you need fresh data)
-npm run go:reset              # Stop Supabase + start + reset DB + start app
-
-# Only reset database (without restarting services)
-npm run dev:reset             # Reset DB with current schema
+# Check bucket exists at http://127.0.0.1:54323
+# Create 'peso-tracker-photos' bucket (public)
 ```
 
-#### When to use each command:
-- **`npm run go`**: Daily development workflow, preserves existing data
-- **`npm run go:reset`**: When you need to start completely fresh (new schema changes, corrupted data, clean slate)
-- **`npm run dev:reset`**: When you only need to clear data but keep services running
-
-#### Alternative Commands
+### JWT Token Invalid
 ```bash
-npm run restart               # Stop all + restart (keeps data)
-npm run supabase:reset        # Reset using Supabase CLI (alternative method)
+# Login again to get new token
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
 ```
 
-### Common Tasks
+### Duplicate Date Error (409)
 ```bash
-npx prisma studio             # Database GUI
-npx prisma migrate reset      # Reset database (manual)
-npx prisma generate           # Regenerate Prisma client
-npm run lint                  # Code linting
-npm run format                # Code formatting
+# Use PATCH instead of POST to update existing weight
+# Or change the date in your request
 ```
 
-### Testing New Features
-```bash
-# Test chart data temporal pagination (enhanced with smart filtering)
-curl "http://localhost:3000/weights/chart-data?timeRange=all&page=0"
-curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=0"
+## Storage Requirements
+- **Bucket:** `peso-tracker-photos` (public)
+- **Max size:** 5MB
+- **Types:** JPEG, PNG, WebP
+- **Auto-generated:** 3 sizes (150px, 400px, 800px)
 
-# Test table pagination
-curl "http://localhost:3000/weights/paginated?page=1&limit=5"
+## Before Committing Changes
+1. `npm run lint` - Must pass
+2. Test endpoints in Bruno
+3. Check Swagger docs updated
+4. Verify no credentials exposed
 
-# Test dashboard endpoints
-curl "http://localhost:3000/dashboard/stats"
-```
+## Performance Notes
+- Always use `userId` in queries for user isolation
+- Pagination required for lists (max 50 items)
+- Photos auto-deleted when weight deleted
 
-## Storage Configuration
+## Security Checklist
+- All endpoints use `@UseGuards(JwtAuthGuard)` except auth/health
+- Always verify `userId` ownership in services
+- File uploads: type and size validation in StorageService
+- No credentials in code - use env vars
 
-### Bucket Setup
-1. Bucket name: `peso-tracker-photos`
-2. Public access: Enabled
-3. File size limit: 5MB
-4. Allowed types: `image/jpeg`, `image/png`, `image/webp`
 
-### URL Structure
-```
-http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/{userId}/{weightId}/{timestamp}_{size}.{ext}
-```
 
-## Testing Strategy
 
-### API Tests
-- Bruno collections in `/api-tests/`
-- Covers all endpoints with authentication
-- Includes error scenarios and edge cases
+---
 
-### Unit Tests
-- Service layer testing
-- Mock external dependencies (Prisma, Supabase)
-- Business logic validation
-
-## Performance Considerations
-
-### Database
-- Indexes on foreign keys and unique constraints
-- Pagination for large data sets
-- Date-based filtering for weights
-
-### Storage
-- Multiple image sizes for different use cases
-- Optimized JPEG compression (quality: 85)
-- Efficient deletion with batch operations
-
-### Caching
-- No caching implemented yet (consider Redis for production)
-- Potential areas: user sessions, frequent queries
-
-## Security Measures
-
-### Input Validation
-- DTOs with class-validator decorators
-- Automatic transformation and sanitization
-- File type and size validation for uploads
-
-### Rate Limiting
-- Configurable per environment
-- Development: 1000 requests per 5 minutes
-- Production: Should be stricter
-
-### CORS
-- Configured for frontend URL
-- Environment-specific settings
-
-## Recent Improvements & Enhancements
-
-### Chart Data Endpoint Enhancements (Latest)
-**Problem Solved**: Previously, chart data endpoint generated many empty pages and single-point periods that couldn't create meaningful line graphs.
-
-**Improvements Made**:
-1. **Smart Period Filtering**: Only returns periods with ≥2 data points
-2. **'all' TimeRange**: New option to view complete dataset at once
-3. **Eliminated Empty Navigation**: No more pagination through periods without data
-4. **Removed Weekly Option**: Replaced '1week' with more useful 'all' option
-5. **Removed Obsolete Endpoint**: Cleaned up unused `GET /weights` endpoint
-
-**Impact**: Reduced navigation from 19+ empty pages to only meaningful periods with chart-worthy data.
-
-**Files Modified**:
-- `src/weights/dto/get-chart-data-query.dto.ts`
-- `src/weights/weights.controller.ts` 
-- `src/weights/weights.service.ts`
-
-## Known Limitations & Future Improvements
-
-### Current Limitations
-1. No bulk operations for weights/photos
-2. No advanced analytics or statistics
-3. No data export functionality
-4. No image optimization beyond size variants
-
-### Potential Improvements
-1. Add weight statistics and trend analysis
-2. Implement data export (CSV, JSON)
-3. Add weight prediction algorithms
-4. Implement social features (sharing, comparisons)
-5. Add notification system for goals
-6. Implement backup/restore functionality
-
-## Debugging Tips
-
-### Common Issues
-1. **Prisma Connection**: Check DATABASE_URL format
-2. **Supabase Storage**: Ensure bucket exists and is public
-3. **JWT Errors**: Verify JWT_SECRET matches between services
-4. **File Upload**: Check file size limits and content types
-
-### Useful Commands
-```bash
-# Check Supabase status
-npx supabase status
-
-# Reset local database
-npx supabase db reset
-
-# View logs
-npx supabase logs
-
-# Test database connection
-npx prisma db pull
-```
-
-## Integration Points
-
-### Frontend Integration
-- JWT token in Authorization header
-- Multipart form data for photo uploads
-- Standard REST responses with consistent error format
-- Swagger documentation for API reference
-
-### Third-party Services
-- Supabase: Database and storage
-- Sharp: Image processing
-- Prisma: Database ORM
-- NestJS: Framework and ecosystem
-
-This context should help you understand the application architecture, make informed decisions about modifications, and maintain consistency with existing patterns.
+**Remember:** This API follows standard REST patterns with JWT auth. User isolation is critical - always filter by `userId`. Photos are handled automatically by StorageService. Check Bruno tests for examples.
