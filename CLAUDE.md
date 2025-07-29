@@ -309,10 +309,35 @@ npx prisma migrate dev        # Apply migrations
 npm run start:dev             # Start development server
 ```
 
+### Development Scripts
+
+#### Quick Start Commands
+```bash
+# Fast development start (recommended for daily use)
+npm run go                     # Start Supabase + push schema + start app
+
+# Clean start with database reset (when you need fresh data)
+npm run go:reset              # Stop Supabase + start + reset DB + start app
+
+# Only reset database (without restarting services)
+npm run dev:reset             # Reset DB with current schema
+```
+
+#### When to use each command:
+- **`npm run go`**: Daily development workflow, preserves existing data
+- **`npm run go:reset`**: When you need to start completely fresh (new schema changes, corrupted data, clean slate)
+- **`npm run dev:reset`**: When you only need to clear data but keep services running
+
+#### Alternative Commands
+```bash
+npm run restart               # Stop all + restart (keeps data)
+npm run supabase:reset        # Reset using Supabase CLI (alternative method)
+```
+
 ### Common Tasks
 ```bash
 npx prisma studio             # Database GUI
-npx prisma migrate reset      # Reset database
+npx prisma migrate reset      # Reset database (manual)
 npx prisma generate           # Regenerate Prisma client
 npm run lint                  # Code linting
 npm run format                # Code formatting

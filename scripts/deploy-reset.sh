@@ -22,10 +22,7 @@ echo "- Apply all migrations"
 
 # Reset database (drops all tables and recreates them)
 echo "🗃️  Resetting database schema..."
-npx prisma migrate reset --force
-
-echo "📋 Applying migrations..."
-npx prisma migrate deploy
+npx prisma db push --force-reset
 
 echo "✅ Database reset completed successfully!"
 

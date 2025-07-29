@@ -4,6 +4,25 @@ A comprehensive weight tracking application backend built with NestJS, Prisma, a
 
 ## 🚀 Quick Start
 
+### Option 1: Fast Setup (Recommended)
+```bash
+# Install dependencies
+npm install
+
+# Start everything with one command (recommended for daily use)
+npm run go                    # Starts Supabase + applies schema + starts dev server
+```
+
+### Option 2: Clean Start (When you need fresh data)
+```bash
+# Install dependencies
+npm install
+
+# Start with database reset (clean slate)
+npm run go:reset             # Stops all + starts + resets DB + starts dev server
+```
+
+### Option 3: Manual Setup
 ```bash
 # Install dependencies
 npm install
@@ -20,6 +39,15 @@ npx prisma migrate dev
 # Start development server
 npm run start:dev
 ```
+
+### Development Commands
+
+| Command | Description | When to use |
+|---------|-------------|-------------|
+| `npm run go` | Quick start (preserves data) | Daily development |
+| `npm run go:reset` | Clean start with DB reset | New schema, fresh start |
+| `npm run dev:reset` | Reset database only | Clear data, keep services |
+| `npm run restart` | Restart all services | After system changes |
 
 ## 🌟 Features
 

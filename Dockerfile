@@ -58,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV RESET_DATABASE=true
 
 # Start script that handles database reset and app startup
-CMD ["sh", "-c", "if [ \"$RESET_DATABASE\" = \"true\" ]; then echo 'Resetting database...' && npx prisma migrate reset --force && npx prisma migrate deploy; else npx prisma migrate deploy; fi && dumb-init node dist/main"]
+CMD ["sh", "-c", "if [ \"$RESET_DATABASE\" = \"true\" ]; then echo 'Resetting database...' && npx prisma db push --force-reset; else npx prisma db push; fi && dumb-init node dist/main"]

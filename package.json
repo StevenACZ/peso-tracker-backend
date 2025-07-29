@@ -20,8 +20,8 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "deploy:build": "npm run build && npm run db:generate",
-    "deploy:migrate": "npx prisma migrate deploy",
-    "deploy:reset": "npx prisma migrate reset --force && npx prisma migrate deploy",
+    "deploy:migrate": "npx prisma db push",
+    "deploy:reset": "npx prisma db push --force-reset",
     "deploy:start": "npm run deploy:migrate && npm run start:prod",
     "deploy:start:reset": "npm run deploy:reset && npm run start:prod",
     "dev": "npm run start:dev:env",
@@ -34,7 +34,9 @@
     "db:push:local": "cp .env.development .env && npx prisma db push",
     "db:studio:local": "cp .env.development .env && npm run db:studio",
     "db:migrate:local": "cp .env.development .env && npx prisma migrate dev",
+    "dev:reset": "cp .env.development .env && npx prisma db push --force-reset",
     "go": "npm run supabase:start && npm run db:push:local && npm run start:dev:env",
+    "go:reset": "npm run supabase:stop && npm run supabase:start && npm run dev:reset && npm run start:dev:env",
     "restart": "npm run supabase:stop && npm run go"
   },
   "dependencies": {
