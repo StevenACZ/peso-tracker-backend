@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install dependencies (including dev dependencies for build)
 RUN npm ci && npm cache clean --force
 
 # Copy source code
@@ -36,6 +36,13 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
+
+# Switch to non-root user temporarily for setup
+USER root
+
+# Install production dependencies and setup
+RUN npm ci --only-production && npm cache clean --force
 
 # Switch to non-root user
 USER nestjs
@@ -47,5 +54,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Start the application
-CMD ["dumb-init", "node", "dist/main"]
+# Environment variable to trigger database reset on first deploy
+ENV RESET_DATABASE=true
+
+# Start script that handles database reset and app startup
+CMD ["sh", "-c", "if [ \"$RESET_DATABASE\" = \"true\" ]; then echo 'Resetting database...' && npx prisma migrate reset --force && npx prisma migrate deploy; else npx prisma migrate deploy; fi && dumb-init node dist/main"]
