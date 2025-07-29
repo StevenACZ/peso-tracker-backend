@@ -433,6 +433,39 @@ export class WeightsService {
     }
   }
 
+  async getWeightProgress(userId: number) {
+    const weights = await this.prisma.weight.findMany({
+      where: { 
+        userId,
+        photos: {
+          isNot: null, // Solo pesos que tienen fotos asociadas
+        },
+      },
+      orderBy: { date: 'asc' }, // Ordenar desde el más antiguo al más reciente
+      include: {
+        photos: true,
+      },
+    });
+
+    return weights.map((weight) => ({
+      id: weight.id,
+      weight: Number(weight.weight),
+      date: weight.date,
+      notes: weight.notes,
+      photo: {
+        id: weight.photos!.id,
+        userId: weight.photos!.userId,
+        weightId: weight.photos!.weightId,
+        notes: weight.photos!.notes,
+        thumbnailUrl: weight.photos!.thumbnailUrl,
+        mediumUrl: weight.photos!.mediumUrl,
+        fullUrl: weight.photos!.fullUrl,
+        createdAt: weight.photos!.createdAt,
+        updatedAt: weight.photos!.updatedAt,
+      },
+    }));
+  }
+
   async getPaginatedData(userId: number, page: number = 1, limit: number = 5) {
     const skip = (page - 1) * limit;
 

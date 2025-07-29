@@ -149,6 +149,46 @@ export class WeightsController {
     return this.weightsService.getChartData(user.id, query.timeRange, query.page);
   }
 
+  @Get('progress')
+  @ApiOperation({ 
+    summary: 'Obtener progreso de peso con fotos',
+    description: 'Retorna todos los registros de peso que tienen fotos asociadas, ordenados cronológicamente desde el más antiguo al más reciente para visualizar el progreso visual.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de registros de peso con fotos para visualizar progreso.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'number', example: 1 },
+          weight: { type: 'number', example: 72.5 },
+          date: { type: 'string', format: 'date-time', example: '2024-01-15T00:00:00.000Z' },
+          notes: { type: 'string', example: 'Peso después del ejercicio' },
+          photo: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 1 },
+              userId: { type: 'number', example: 123 },
+              weightId: { type: 'number', example: 1 },
+              notes: { type: 'string', example: 'Foto de progreso' },
+              thumbnailUrl: { type: 'string', example: 'https://example.com/thumb.jpg' },
+              mediumUrl: { type: 'string', example: 'https://example.com/medium.jpg' },
+              fullUrl: { type: 'string', example: 'https://example.com/full.jpg' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  getWeightProgress(@CurrentUser() user: { id: number }) {
+    return this.weightsService.getWeightProgress(user.id);
+  }
+
   @Get('paginated')
   @ApiOperation({ summary: 'Obtener registros de peso paginados para tabla' })
   @ApiResponse({
