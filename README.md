@@ -25,10 +25,11 @@ npm run start:dev
 
 - **JWT Authentication**: Secure user registration and login
 - **Weight Management**: Complete CRUD for weight records with date constraints
-- **📊 Temporal Pagination**: Advanced time-based navigation for charts (NEW)
-- **📋 Table Pagination**: Traditional record-based pagination for data tables (NEW)
+- **📊 Temporal Pagination**: Advanced time-based navigation for charts
+- **📋 Table Pagination**: Traditional record-based pagination for data tables
+- **📸 Visual Progress Tracking**: Dedicated endpoint for weights with photos (NEW)
 - **Photo Management**: One photo per weight with multiple sizes (consolidated into weights)
-- **🎯 Dashboard Analytics**: Overview and statistics endpoints (NEW)
+- **🎯 Dashboard Analytics**: Overview and statistics endpoints
 - **Goal System**: Simplified goal management system
 - **Data Validation**: Robust input validation using class-validator
 - **Security**: Helmet, CORS, and Rate Limiting protection
@@ -40,9 +41,27 @@ npm run start:dev
 
 Base URL: `http://localhost:3000`
 
+### 📋 Quick Reference
+
+| Endpoint              | Method   | Description                           | Auth Required |
+| --------------------- | -------- | ------------------------------------- | ------------- |
+| `/auth/register`      | POST     | Register new user                     | ❌            |
+| `/auth/login`         | POST     | User login                            | ❌            |
+| `/health`             | GET      | General health check                  | ❌            |
+| `/weights`            | POST     | Create weight record                  | ✅            |
+| `/weights/chart-data` | GET      | Chart data with temporal pagination   | ✅            |
+| `/weights/paginated`  | GET      | Table data with record pagination     | ✅            |
+| `/weights/progress`   | GET      | Visual progress (weights with photos) | ✅            |
+| `/weights/:id`        | GET      | Get specific weight                   | ✅            |
+| `/weights/:id`        | PATCH    | Update weight                         | ✅            |
+| `/weights/:id`        | DELETE   | Delete weight                         | ✅            |
+| `/goals`              | GET/POST | Manage goals                          | ✅            |
+| `/dashboard/stats`    | GET      | Dashboard statistics                  | ✅            |
+
 ### Authentication
 
 #### Register User
+
 ```bash
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
@@ -54,6 +73,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 **Response:**
+
 ```json
 {
   "user": {
@@ -67,6 +87,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 #### Login
+
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
@@ -79,16 +100,19 @@ curl -X POST http://localhost:3000/auth/login \
 ### Health Checks
 
 #### General Health
+
 ```bash
 curl http://localhost:3000/health
 ```
 
 #### Database Health
+
 ```bash
 curl http://localhost:3000/health/database
 ```
 
 #### Supabase Health
+
 ```bash
 curl http://localhost:3000/health/supabase
 ```
@@ -98,6 +122,7 @@ curl http://localhost:3000/health/supabase
 > 🔐 **All weight endpoints require authentication**. Include the JWT token in the Authorization header.
 
 #### Create Weight Record (with optional photo)
+
 ```bash
 # With photo
 curl -X POST http://localhost:3000/weights \
@@ -108,7 +133,7 @@ curl -X POST http://localhost:3000/weights \
   -F "photo=@/path/to/your/image.jpg" \
   -F "photoNotes=Progress photo"
 
-# Without photo  
+# Without photo
 curl -X POST http://localhost:3000/weights \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -120,6 +145,7 @@ curl -X POST http://localhost:3000/weights \
 ```
 
 **Response:**
+
 ```json
 {
   "id": 1,
@@ -139,6 +165,7 @@ curl -X POST http://localhost:3000/weights \
 ```
 
 #### 📊 Get Chart Data (NEW - Temporal Pagination)
+
 Navigate through complete time periods for chart visualization:
 
 ```bash
@@ -146,7 +173,7 @@ Navigate through complete time periods for chart visualization:
 curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=0" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
-# Previous month  
+# Previous month
 curl "http://localhost:3000/weights/chart-data?timeRange=1month&page=1" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
@@ -156,15 +183,15 @@ curl "http://localhost:3000/weights/chart-data?timeRange=1year&page=0" \
 ```
 
 **Parameters:**
+
 - `timeRange`: `1week`, `1month`, `3months`, `6months`, `1year`
 - `page`: Period index (0 = most recent, 1 = previous, etc.)
 
 **Response:**
+
 ```json
 {
-  "data": [
-    {"weight": 72.5, "date": "2024-01-15T00:00:00.000Z"}
-  ],
+  "data": [{ "weight": 72.5, "date": "2024-01-15T00:00:00.000Z" }],
   "pagination": {
     "currentPeriod": "Enero 2025",
     "hasNext": true,
@@ -176,6 +203,7 @@ curl "http://localhost:3000/weights/chart-data?timeRange=1year&page=0" \
 ```
 
 #### 📋 Get Paginated Data (NEW - Table Pagination)
+
 Traditional record-based pagination for table views:
 
 ```bash
@@ -189,6 +217,7 @@ curl "http://localhost:3000/weights/paginated?page=2&limit=10" \
 ```
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -209,7 +238,48 @@ curl "http://localhost:3000/weights/paginated?page=2&limit=10" \
 }
 ```
 
+#### 📸 Get Weight Progress (NEW - Visual Progress)
+
+Get all weight records that have photos for visual progress tracking:
+
+```bash
+curl http://localhost:3000/weights/progress \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "weight": 72.5,
+    "date": "2024-01-15T00:00:00.000Z",
+    "notes": "Starting weight",
+    "photo": {
+      "id": 1,
+      "userId": 1,
+      "weightId": 1,
+      "notes": "Progress photo",
+      "thumbnailUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/thumbnail.jpg",
+      "mediumUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/medium.jpg",
+      "fullUrl": "http://127.0.0.1:54321/storage/v1/object/public/peso-tracker-photos/1/1/full.jpg",
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z"
+    }
+  }
+]
+```
+
+**Features:**
+
+- Only returns weights with associated photos
+- Ordered chronologically from oldest to newest
+- Perfect for creating visual progress galleries
+- Includes complete photo information with all sizes
+
 #### Get All Weights (Legacy endpoint)
+
 ```bash
 # Basic request
 curl http://localhost:3000/weights \
@@ -221,18 +291,21 @@ curl "http://localhost:3000/weights?page=1&limit=10&startDate=2025-07-01&endDate
 ```
 
 #### Get Weight by ID
+
 ```bash
 curl http://localhost:3000/weights/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### Get Weight Photo
+
 ```bash
 curl http://localhost:3000/weights/1/photo \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Response:**
+
 ```json
 {
   "id": 1,
@@ -248,6 +321,7 @@ curl http://localhost:3000/weights/1/photo \
 ```
 
 #### Update Weight
+
 ```bash
 curl -X PATCH http://localhost:3000/weights/1 \
   -H "Content-Type: application/json" \
@@ -259,6 +333,7 @@ curl -X PATCH http://localhost:3000/weights/1 \
 ```
 
 #### Delete Weight
+
 ```bash
 curl -X DELETE http://localhost:3000/weights/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -269,12 +344,14 @@ curl -X DELETE http://localhost:3000/weights/1 \
 Get aggregated data and statistics:
 
 #### Get Dashboard Statistics
+
 ```bash
 curl http://localhost:3000/dashboard/stats \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### Get Dashboard Overview
+
 ```bash
 curl http://localhost:3000/dashboard/overview \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -291,6 +368,7 @@ curl http://localhost:3000/dashboard/overview \
 ### Goals Management
 
 #### Create Goal
+
 ```bash
 curl -X POST http://localhost:3000/goals \
   -H "Content-Type: application/json" \
@@ -303,18 +381,21 @@ curl -X POST http://localhost:3000/goals \
 ```
 
 #### Get All Goals
+
 ```bash
 curl http://localhost:3000/goals \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### Get Goal by ID
+
 ```bash
 curl http://localhost:3000/goals/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### Update Goal
+
 ```bash
 curl -X PATCH http://localhost:3000/goals/1 \
   -H "Content-Type: application/json" \
@@ -326,6 +407,7 @@ curl -X PATCH http://localhost:3000/goals/1 \
 ```
 
 #### Delete Goal
+
 ```bash
 curl -X DELETE http://localhost:3000/goals/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -377,6 +459,7 @@ RATE_LIMIT_LIMIT=1000
 ## 📊 Database Schema
 
 ### Users
+
 - `id`: Primary key
 - `username`: Unique username
 - `email`: Unique email address
@@ -384,6 +467,7 @@ RATE_LIMIT_LIMIT=1000
 - `createdAt`, `updatedAt`: Timestamps
 
 ### Weights
+
 - `id`: Primary key
 - `userId`: Foreign key to Users
 - `weight`: Decimal weight value
@@ -392,6 +476,7 @@ RATE_LIMIT_LIMIT=1000
 - `createdAt`, `updatedAt`: Timestamps
 
 ### Photos
+
 - `id`: Primary key
 - `userId`: Foreign key to Users
 - `weightId`: Foreign key to Weights (unique - one photo per weight)
@@ -400,6 +485,7 @@ RATE_LIMIT_LIMIT=1000
 - `createdAt`, `updatedAt`: Timestamps
 
 ### Goals
+
 - `id`: Primary key
 - `userId`: Foreign key to Users
 - `targetWeight`: Target weight
@@ -413,43 +499,57 @@ RATE_LIMIT_LIMIT=1000
 ## 🔧 Key Features
 
 ### Photo Management
+
 - **One photo per weight**: Database constraint ensures data integrity
 - **Multiple sizes**: Automatic generation of thumbnail, medium, and full-size images
 - **Supabase Storage**: Secure cloud storage with public URLs
 - **Direct weight access**: Get photo directly via weight ID
 
 ### Weight Tracking
+
 - **Date uniqueness**: One weight record per date per user
 - **Photo integration**: Seamless photo association
 - **Pagination**: Efficient data retrieval with pagination
 - **Date filtering**: Query weights by date range
 
 ### Authentication & Security
+
 - **JWT tokens**: Secure authentication with configurable expiration
 - **Route protection**: All user data endpoints require authentication
 - **User isolation**: Users can only access their own data
 - **Password hashing**: Bcrypt for secure password storage
 
 ### Goal System
+
 - **Hierarchical goals**: Support for main goals and milestones
 - **Auto-generation**: System can create milestone goals
 - **Flexible targeting**: Date and weight-based goals
 
 ## 🚨 Important Notes
 
-### ⏰ Temporal Pagination (NEW)
+### ⏰ Temporal Pagination
+
 - **Chart Data**: Uses 0-based page indexing (0 = most recent period)
 - **Table Data**: Uses 1-based page indexing (1 = first page)
 - **Period Navigation**: `hasNext`/`hasPrevious` indicate available periods
 - **Period Labels**: Human-readable period descriptions in Spanish
 
+### 📸 Visual Progress Tracking
+
+- **Progress Endpoint**: `/weights/progress` returns only weights with photos
+- **Chronological Order**: Results ordered from oldest to newest for progress visualization
+- **Complete Photo Data**: Includes all photo sizes and metadata
+- **Perfect for Galleries**: Ideal for creating before/after photo galleries
+
 ### Photo Constraints
+
 - Only **one photo per weight record** is allowed (database constraint)
 - Photos are now managed through weight endpoints (consolidated)
 - Uploading to existing weight replaces the previous photo
 - Photos support three sizes: thumbnail (150x150), medium (400x400), full (800x800)
 
 ### Storage Setup
+
 Before using photo functionality, ensure the Supabase storage bucket exists:
 
 1. Open Supabase Dashboard: `http://127.0.0.1:54323`
@@ -459,13 +559,16 @@ Before using photo functionality, ensure the Supabase storage bucket exists:
 5. Save
 
 ### Date Constraints
+
 - Only **one weight record per date per user** (database constraint)
 - Dates should be in ISO format: `YYYY-MM-DD`
 - Attempting duplicate dates will return a 409 error
 
 ### API Changes
+
 - **Photos module removed**: Functionality moved to weights module
 - **Dashboard module added**: New analytics endpoints
+- **Progress endpoint added**: New `/weights/progress` for visual tracking
 - **Enhanced validation**: Better error handling and type safety
 
 ## 🌐 Development URLs
