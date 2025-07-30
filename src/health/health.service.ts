@@ -65,7 +65,7 @@ export class HealthService {
       return {
         status: 'unhealthy',
         message: 'Database connection failed',
-        error: (error as any).message,
+        error: error.message,
       };
     }
   }
@@ -87,8 +87,8 @@ export class HealthService {
     } catch (error) {
       // If it's an auth error, Supabase is actually working
       if (
-        (error as any).message?.includes('JWT') ||
-        (error as any).message?.includes('session')
+        error.message?.includes('JWT') ||
+        error.message?.includes('session')
       ) {
         return {
           status: 'healthy',
@@ -100,7 +100,7 @@ export class HealthService {
       return {
         status: 'unhealthy',
         message: 'Supabase connection failed',
-        error: (error as any).message,
+        error: error.message,
       };
     }
   }

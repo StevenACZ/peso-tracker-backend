@@ -15,7 +15,8 @@ export class GetChartDataQueryDto {
   timeRange?: string = '1month';
 
   @ApiProperty({
-    description: 'Número de página del período (0 = más reciente, 1 = anterior, etc.)',
+    description:
+      'Número de página del período (0 = más reciente, 1 = anterior, etc.)',
     required: false,
     default: 0,
     example: 0,

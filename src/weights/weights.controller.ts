@@ -98,7 +98,8 @@ export class WeightsController {
   @Get('chart-data')
   @ApiOperation({
     summary: 'Obtener datos de peso para gráficos con paginación temporal',
-    description: 'Retorna datos de peso por períodos que contienen registros (todos, mes, trimestre, semestre, año) con navegación entre períodos.',
+    description:
+      'Retorna datos de peso por períodos que contienen registros (todos, mes, trimestre, semestre, año) con navegación entre períodos.',
   })
   @ApiQuery({
     name: 'timeRange',
@@ -124,7 +125,11 @@ export class WeightsController {
             type: 'object',
             properties: {
               weight: { type: 'number', example: 72.5 },
-              date: { type: 'string', format: 'date-time', example: '2024-01-15T00:00:00.000Z' },
+              date: {
+                type: 'string',
+                format: 'date-time',
+                example: '2024-01-15T00:00:00.000Z',
+              },
             },
           },
         },
@@ -146,17 +151,23 @@ export class WeightsController {
     @CurrentUser() user: { id: number },
     @Query() query: GetChartDataQueryDto,
   ) {
-    return this.weightsService.getChartData(user.id, query.timeRange, query.page);
+    return this.weightsService.getChartData(
+      user.id,
+      query.timeRange,
+      query.page,
+    );
   }
 
   @Get('progress')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener progreso de peso con fotos',
-    description: 'Retorna todos los registros de peso que tienen fotos asociadas, ordenados cronológicamente desde el más antiguo al más reciente para visualizar el progreso visual.'
+    description:
+      'Retorna todos los registros de peso que tienen fotos asociadas, ordenados cronológicamente desde el más antiguo al más reciente para visualizar el progreso visual.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista de registros de peso con fotos para visualizar progreso.',
+    description:
+      'Lista de registros de peso con fotos para visualizar progreso.',
     schema: {
       type: 'array',
       items: {
@@ -164,7 +175,11 @@ export class WeightsController {
         properties: {
           id: { type: 'number', example: 1 },
           weight: { type: 'number', example: 72.5 },
-          date: { type: 'string', format: 'date-time', example: '2024-01-15T00:00:00.000Z' },
+          date: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-15T00:00:00.000Z',
+          },
           notes: { type: 'string', example: 'Peso después del ejercicio' },
           photo: {
             type: 'object',
@@ -173,9 +188,18 @@ export class WeightsController {
               userId: { type: 'number', example: 123 },
               weightId: { type: 'number', example: 1 },
               notes: { type: 'string', example: 'Foto de progreso' },
-              thumbnailUrl: { type: 'string', example: 'https://example.com/thumb.jpg' },
-              mediumUrl: { type: 'string', example: 'https://example.com/medium.jpg' },
-              fullUrl: { type: 'string', example: 'https://example.com/full.jpg' },
+              thumbnailUrl: {
+                type: 'string',
+                example: 'https://example.com/thumb.jpg',
+              },
+              mediumUrl: {
+                type: 'string',
+                example: 'https://example.com/medium.jpg',
+              },
+              fullUrl: {
+                type: 'string',
+                example: 'https://example.com/full.jpg',
+              },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
             },
@@ -204,7 +228,11 @@ export class WeightsController {
             properties: {
               id: { type: 'number', example: 1 },
               weight: { type: 'number', example: 72.5 },
-              date: { type: 'string', format: 'date-time', example: '2024-01-15T00:00:00.000Z' },
+              date: {
+                type: 'string',
+                format: 'date-time',
+                example: '2024-01-15T00:00:00.000Z',
+              },
               notes: { type: 'string', example: 'Peso después del ejercicio' },
               hasPhoto: { type: 'boolean', example: true },
             },
@@ -233,7 +261,6 @@ export class WeightsController {
       query.limit,
     );
   }
-
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un registro de peso por ID' })
