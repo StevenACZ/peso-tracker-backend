@@ -16,12 +16,29 @@ export class PrismaService
   private readonly initialRetryDelay = 1000; // 1 second
 
   constructor() {
+    // Build connection URL with optimized pool settings for Render's limited resources
+    const databaseUrl = new URL(process.env.DATABASE_URL || '');
+    databaseUrl.searchParams.set('connection_limit', '3');
+    databaseUrl.searchParams.set('pool_timeout', '2');
+    databaseUrl.searchParams.set('connect_timeout', '10');
+    
+    // Only require SSL in production (Render/Supabase cloud)
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      databaseUrl.searchParams.set('sslmode', 'require');
+    }
+
     super({
       log: [
         { emit: 'stdout', level: 'info' },
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },
       ],
+      datasources: {
+        db: {
+          url: databaseUrl.toString(),
+        },
+      },
     });
   }
 

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
+import * as compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +16,12 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('nodeEnv');
   const isProduction = configService.get<boolean>('isProduction');
   const corsConfig = configService.get('cors');
+
+  // Compression middleware (reduce response sizes)
+  app.use(compression({
+    threshold: 1024, // Only compress responses > 1KB
+    level: 6, // Balance between compression ratio and CPU usage
+  }));
 
   // Security middleware
   app.use(
