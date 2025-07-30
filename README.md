@@ -351,6 +351,12 @@ curl -X POST http://localhost:3000/weights \
 - **Medium:** 400x400px (para vistas de detalle)
 - **Full:** 800x800px (para visualización completa)
 
+**🔒 URLs Pre-firmadas (Signed URLs):**
+- Todas las URLs de fotos son pre-firmadas con **1 hora de expiración**
+- Compatible con SwiftUI `AsyncImage` sin headers de autenticación
+- Las URLs originales se mantienen en la base de datos, las firmadas se generan dinámicamente
+- Formato: `https://[project].supabase.co/storage/v1/object/sign/peso-tracker-photos/path?token=...`
+
 **Errores Posibles:**
 - **400** - Validación fallida (peso inválido, fecha inválida, etc.)
 - **401** - Token JWT inválido o expirado

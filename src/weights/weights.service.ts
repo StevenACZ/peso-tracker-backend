@@ -127,23 +127,42 @@ export class WeightsService {
       this.prisma.weight.count({ where }),
     ]);
 
-    const formattedWeights = weights.map((weight) => ({
-      ...weight,
-      photo:
-        weight.photos
-          ? {
-              id: weight.photos.id,
-              userId: weight.photos.userId,
-              weightId: weight.photos.weightId,
-              thumbnailUrl: weight.photos.thumbnailUrl,
-              mediumUrl: weight.photos.mediumUrl,
-              fullUrl: weight.photos.fullUrl,
-              createdAt: weight.photos.createdAt,
-              updatedAt: weight.photos.updatedAt,
-            }
-          : null,
-      photos: undefined,
-    }));
+    const formattedWeights = await Promise.all(
+      weights.map(async (weight) => {
+        let photo: {
+          id: number;
+          userId: number;
+          weightId: number;
+          thumbnailUrl: string;
+          mediumUrl: string;
+          fullUrl: string;
+          createdAt: Date;
+          updatedAt: Date;
+        } | null = null;
+        if (weight.photos) {
+          const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+            thumbnailUrl: weight.photos.thumbnailUrl,
+            mediumUrl: weight.photos.mediumUrl,
+            fullUrl: weight.photos.fullUrl,
+          });
+          photo = {
+            id: weight.photos.id,
+            userId: weight.photos.userId,
+            weightId: weight.photos.weightId,
+            thumbnailUrl: signedUrls.thumbnailUrl,
+            mediumUrl: signedUrls.mediumUrl,
+            fullUrl: signedUrls.fullUrl,
+            createdAt: weight.photos.createdAt,
+            updatedAt: weight.photos.updatedAt,
+          };
+        }
+        return {
+          ...weight,
+          photo,
+          photos: undefined,
+        };
+      }),
+    );
 
     return {
       data: formattedWeights,
@@ -156,7 +175,11 @@ export class WeightsService {
     };
   }
 
-  async getChartData(userId: number, timeRange: string = '1month', page: number = 0) {
+  async getChartData(
+    userId: number,
+    timeRange: string = '1month',
+    page: number = 0,
+  ) {
     // Si es 'all', devolver todos los datos (mínimo 2 para crear gráfico)
     if (timeRange === 'all') {
       const weights = await this.prisma.weight.findMany({
@@ -199,7 +222,7 @@ export class WeightsService {
 
     // Obtener períodos que tienen datos
     const periodsWithData = await this.getPeriodsWithData(userId, timeRange);
-    
+
     if (periodsWithData.length === 0) {
       return {
         data: [],
@@ -219,7 +242,7 @@ export class WeightsService {
     }
 
     const currentPeriod = periodsWithData[page];
-    
+
     // Obtener pesos del período actual
     const weights = await this.prisma.weight.findMany({
       where: {
@@ -263,7 +286,10 @@ export class WeightsService {
       return [];
     }
 
-    const periodCounts = new Map<string, { startDate: Date; endDate: Date; label: string; count: number }>();
+    const periodCounts = new Map<
+      string,
+      { startDate: Date; endDate: Date; label: string; count: number }
+    >();
 
     // Agrupar fechas por período según el timeRange y contar registros
     for (const weight of weights) {
@@ -279,9 +305,21 @@ export class WeightsService {
           startDate = new Date(date.getFullYear(), date.getMonth(), 1);
           endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
           endDate.setHours(23, 59, 59, 999);
-          
-          const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+          const monthNames = [
+            'Enero',
+            'Febrero',
+            'Marzo',
+            'Abril',
+            'Mayo',
+            'Junio',
+            'Julio',
+            'Agosto',
+            'Septiembre',
+            'Octubre',
+            'Noviembre',
+            'Diciembre',
+          ];
           label = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
           break;
         }
@@ -291,7 +329,7 @@ export class WeightsService {
           startDate = new Date(date.getFullYear(), quarter * 3, 1);
           endDate = new Date(date.getFullYear(), quarter * 3 + 3, 0);
           endDate.setHours(23, 59, 59, 999);
-          
+
           label = `Q${quarter + 1} ${date.getFullYear()}`;
           break;
         }
@@ -301,7 +339,7 @@ export class WeightsService {
           startDate = new Date(date.getFullYear(), semester * 6, 1);
           endDate = new Date(date.getFullYear(), semester * 6 + 6, 0);
           endDate.setHours(23, 59, 59, 999);
-          
+
           label = `S${semester + 1} ${date.getFullYear()}`;
           break;
         }
@@ -309,7 +347,7 @@ export class WeightsService {
           periodKey = `${date.getFullYear()}`;
           startDate = new Date(date.getFullYear(), 0, 1);
           endDate = new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
-          
+
           label = `${date.getFullYear()}`;
           break;
         }
@@ -325,11 +363,13 @@ export class WeightsService {
 
     // Filtrar períodos que tienen al menos 2 registros
     const validPeriods = Array.from(periodCounts.values())
-      .filter(period => period.count >= 2)
+      .filter((period) => period.count >= 2)
       .map(({ startDate, endDate, label }) => ({ startDate, endDate, label }));
 
     // Ordenar por fecha (más reciente primero)
-    return validPeriods.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+    return validPeriods.sort(
+      (a, b) => b.startDate.getTime() - a.startDate.getTime(),
+    );
   }
 
   private calculatePeriodRange(
@@ -346,24 +386,60 @@ export class WeightsService {
     switch (timeRange) {
       case '1month': {
         // Calcular el mes actual basado en la página
-        const targetDate = new Date(now.getFullYear(), now.getMonth() - page, 1);
-        startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+        const targetDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - page,
+          1,
+        );
+        startDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          1,
+        );
+        endDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth() + 1,
+          0,
+        );
         endDate.setHours(23, 59, 59, 999);
-        
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        const monthNames = [
+          'Enero',
+          'Febrero',
+          'Marzo',
+          'Abril',
+          'Mayo',
+          'Junio',
+          'Julio',
+          'Agosto',
+          'Septiembre',
+          'Octubre',
+          'Noviembre',
+          'Diciembre',
+        ];
         periodLabel = `${monthNames[startDate.getMonth()]} ${startDate.getFullYear()}`;
         break;
       }
       case '3months': {
         // Calcular trimestre
         const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-        const targetDate = new Date(now.getFullYear(), quarterStartMonth - (page * 3), 1);
-        startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 3, 0);
+        const targetDate = new Date(
+          now.getFullYear(),
+          quarterStartMonth - page * 3,
+          1,
+        );
+        startDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          1,
+        );
+        endDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth() + 3,
+          0,
+        );
         endDate.setHours(23, 59, 59, 999);
-        
+
         const quarter = Math.floor(targetDate.getMonth() / 3) + 1;
         periodLabel = `Q${quarter} ${targetDate.getFullYear()}`;
         break;
@@ -371,11 +447,23 @@ export class WeightsService {
       case '6months': {
         // Calcular semestre
         const semesterStartMonth = Math.floor(now.getMonth() / 6) * 6;
-        const targetDate = new Date(now.getFullYear(), semesterStartMonth - (page * 6), 1);
-        startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 6, 0);
+        const targetDate = new Date(
+          now.getFullYear(),
+          semesterStartMonth - page * 6,
+          1,
+        );
+        startDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          1,
+        );
+        endDate = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth() + 6,
+          0,
+        );
         endDate.setHours(23, 59, 59, 999);
-        
+
         const semester = Math.floor(targetDate.getMonth() / 6) + 1;
         periodLabel = `S${semester} ${targetDate.getFullYear()}`;
         break;
@@ -385,7 +473,7 @@ export class WeightsService {
         const targetYear = now.getFullYear() - page;
         startDate = new Date(targetYear, 0, 1);
         endDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
-        
+
         periodLabel = `${targetYear}`;
         break;
       }
@@ -394,9 +482,21 @@ export class WeightsService {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endDate.setHours(23, 59, 59, 999);
-        
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        const monthNames = [
+          'Enero',
+          'Febrero',
+          'Marzo',
+          'Abril',
+          'Mayo',
+          'Junio',
+          'Julio',
+          'Agosto',
+          'Septiembre',
+          'Octubre',
+          'Noviembre',
+          'Diciembre',
+        ];
         periodLabel = `${monthNames[startDate.getMonth()]} ${startDate.getFullYear()}`;
       }
     }
@@ -404,24 +504,34 @@ export class WeightsService {
     return { startDate, endDate, periodLabel };
   }
 
-  private calculateTotalPeriods(timeRange: string, oldestDate: Date, newestDate: Date): number {
+  private calculateTotalPeriods(
+    timeRange: string,
+    oldestDate: Date,
+    newestDate: Date,
+  ): number {
     const oldest = new Date(oldestDate);
     const newest = new Date(newestDate);
-    
+
     switch (timeRange) {
       case '1month': {
-        const diffMonths = (newest.getFullYear() - oldest.getFullYear()) * 12 + 
-          (newest.getMonth() - oldest.getMonth()) + 1;
+        const diffMonths =
+          (newest.getFullYear() - oldest.getFullYear()) * 12 +
+          (newest.getMonth() - oldest.getMonth()) +
+          1;
         return Math.max(1, diffMonths);
       }
       case '3months': {
-        const diffMonths = (newest.getFullYear() - oldest.getFullYear()) * 12 + 
-          (newest.getMonth() - oldest.getMonth()) + 1;
+        const diffMonths =
+          (newest.getFullYear() - oldest.getFullYear()) * 12 +
+          (newest.getMonth() - oldest.getMonth()) +
+          1;
         return Math.max(1, Math.ceil(diffMonths / 3));
       }
       case '6months': {
-        const diffMonths = (newest.getFullYear() - oldest.getFullYear()) * 12 + 
-          (newest.getMonth() - oldest.getMonth()) + 1;
+        const diffMonths =
+          (newest.getFullYear() - oldest.getFullYear()) * 12 +
+          (newest.getMonth() - oldest.getMonth()) +
+          1;
         return Math.max(1, Math.ceil(diffMonths / 6));
       }
       case '1year': {
@@ -435,7 +545,7 @@ export class WeightsService {
 
   async getWeightProgress(userId: number) {
     const weights = await this.prisma.weight.findMany({
-      where: { 
+      where: {
         userId,
         photos: {
           isNot: null, // Solo pesos que tienen fotos asociadas
@@ -447,23 +557,32 @@ export class WeightsService {
       },
     });
 
-    return weights.map((weight) => ({
-      id: weight.id,
-      weight: Number(weight.weight),
-      date: weight.date,
-      notes: weight.notes,
-      photo: {
-        id: weight.photos!.id,
-        userId: weight.photos!.userId,
-        weightId: weight.photos!.weightId,
-        notes: weight.photos!.notes,
-        thumbnailUrl: weight.photos!.thumbnailUrl,
-        mediumUrl: weight.photos!.mediumUrl,
-        fullUrl: weight.photos!.fullUrl,
-        createdAt: weight.photos!.createdAt,
-        updatedAt: weight.photos!.updatedAt,
-      },
-    }));
+    return Promise.all(
+      weights.map(async (weight) => {
+        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+          thumbnailUrl: weight.photos!.thumbnailUrl,
+          mediumUrl: weight.photos!.mediumUrl,
+          fullUrl: weight.photos!.fullUrl,
+        });
+        return {
+          id: weight.id,
+          weight: Number(weight.weight),
+          date: weight.date,
+          notes: weight.notes,
+          photo: {
+            id: weight.photos!.id,
+            userId: weight.photos!.userId,
+            weightId: weight.photos!.weightId,
+            notes: weight.photos!.notes,
+            thumbnailUrl: signedUrls.thumbnailUrl,
+            mediumUrl: signedUrls.mediumUrl,
+            fullUrl: signedUrls.fullUrl,
+            createdAt: weight.photos!.createdAt,
+            updatedAt: weight.photos!.updatedAt,
+          },
+        };
+      }),
+    );
   }
 
   async getPaginatedData(userId: number, page: number = 1, limit: number = 5) {
@@ -509,7 +628,7 @@ export class WeightsService {
     };
   }
 
-  async findOne(id: number, userId: number) {
+  private async findOneRaw(id: number, userId: number) {
     const weight = await this.prisma.weight.findUnique({
       where: { id },
       include: {
@@ -529,19 +648,60 @@ export class WeightsService {
 
     return {
       ...weight,
-      photo:
-        weight.photos
-          ? {
-              id: weight.photos.id,
-              userId: weight.photos.userId,
-              weightId: weight.photos.weightId,
-              thumbnailUrl: weight.photos.thumbnailUrl,
-              mediumUrl: weight.photos.mediumUrl,
-              fullUrl: weight.photos.fullUrl,
-              createdAt: weight.photos.createdAt,
-              updatedAt: weight.photos.updatedAt,
-            }
-          : null,
+      photo: weight.photos || null,
+      photos: undefined,
+    };
+  }
+
+  async findOne(id: number, userId: number) {
+    const weight = await this.prisma.weight.findUnique({
+      where: { id },
+      include: {
+        photos: true,
+      },
+    });
+
+    if (!weight) {
+      throw new NotFoundException('Registro de peso no encontrado');
+    }
+
+    if (weight.userId !== userId) {
+      throw new ForbiddenException(
+        'No tienes permisos para acceder a este registro',
+      );
+    }
+
+    let photo: {
+      id: number;
+      userId: number;
+      weightId: number;
+      thumbnailUrl: string;
+      mediumUrl: string;
+      fullUrl: string;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null = null;
+    if (weight.photos) {
+      const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+        thumbnailUrl: weight.photos.thumbnailUrl,
+        mediumUrl: weight.photos.mediumUrl,
+        fullUrl: weight.photos.fullUrl,
+      });
+      photo = {
+        id: weight.photos.id,
+        userId: weight.photos.userId,
+        weightId: weight.photos.weightId,
+        thumbnailUrl: signedUrls.thumbnailUrl,
+        mediumUrl: signedUrls.mediumUrl,
+        fullUrl: signedUrls.fullUrl,
+        createdAt: weight.photos.createdAt,
+        updatedAt: weight.photos.updatedAt,
+      };
+    }
+
+    return {
+      ...weight,
+      photo,
       photos: undefined,
     };
   }
@@ -552,7 +712,7 @@ export class WeightsService {
     updateWeightDto: UpdateWeightDto,
     file?: Express.Multer.File,
   ) {
-    const existingWeight = await this.findOne(id, userId);
+    const existingWeight = await this.findOneRaw(id, userId);
     const { photoNotes, ...weightData } = updateWeightDto;
 
     try {
@@ -629,15 +789,20 @@ export class WeightsService {
           data: { notes: photoNotes },
         });
 
+        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+          thumbnailUrl: updatedPhoto.thumbnailUrl,
+          mediumUrl: updatedPhoto.mediumUrl,
+          fullUrl: updatedPhoto.fullUrl,
+        });
         return {
           ...updatedWeight,
           photo: {
             id: updatedPhoto.id,
             userId: updatedPhoto.userId,
             weightId: updatedPhoto.weightId,
-            thumbnailUrl: updatedPhoto.thumbnailUrl,
-            mediumUrl: updatedPhoto.mediumUrl,
-            fullUrl: updatedPhoto.fullUrl,
+            thumbnailUrl: signedUrls.thumbnailUrl,
+            mediumUrl: signedUrls.mediumUrl,
+            fullUrl: signedUrls.fullUrl,
             createdAt: updatedPhoto.createdAt,
             updatedAt: updatedPhoto.updatedAt,
           },
@@ -645,21 +810,36 @@ export class WeightsService {
         };
       }
 
+      let photo: {
+        id: number;
+        userId: number;
+        weightId: number;
+        thumbnailUrl: string;
+        mediumUrl: string;
+        fullUrl: string;
+        createdAt: Date;
+        updatedAt: Date;
+      } | null = null;
+      if (updatedWeight.photos) {
+        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+          thumbnailUrl: updatedWeight.photos.thumbnailUrl,
+          mediumUrl: updatedWeight.photos.mediumUrl,
+          fullUrl: updatedWeight.photos.fullUrl,
+        });
+        photo = {
+          id: updatedWeight.photos.id,
+          userId: updatedWeight.photos.userId,
+          weightId: updatedWeight.photos.weightId,
+          thumbnailUrl: signedUrls.thumbnailUrl,
+          mediumUrl: signedUrls.mediumUrl,
+          fullUrl: signedUrls.fullUrl,
+          createdAt: updatedWeight.photos.createdAt,
+          updatedAt: updatedWeight.photos.updatedAt,
+        };
+      }
       return {
         ...updatedWeight,
-        photo:
-          updatedWeight.photos
-            ? {
-                id: updatedWeight.photos.id,
-                userId: updatedWeight.photos.userId,
-                weightId: updatedWeight.photos.weightId,
-                thumbnailUrl: updatedWeight.photos.thumbnailUrl,
-                mediumUrl: updatedWeight.photos.mediumUrl,
-                fullUrl: updatedWeight.photos.fullUrl,
-                createdAt: updatedWeight.photos.createdAt,
-                updatedAt: updatedWeight.photos.updatedAt,
-              }
-            : null,
+        photo,
         photos: undefined,
       };
     } catch (error: any) {
@@ -673,7 +853,7 @@ export class WeightsService {
   }
 
   async getWeightPhoto(weightId: number, userId: number) {
-    const weight = await this.findOne(weightId, userId);
+    const weight = await this.findOneRaw(weightId, userId);
 
     if (!weight.photo) {
       throw new NotFoundException(
@@ -681,20 +861,26 @@ export class WeightsService {
       );
     }
 
+    const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+      thumbnailUrl: weight.photo.thumbnailUrl,
+      mediumUrl: weight.photo.mediumUrl,
+      fullUrl: weight.photo.fullUrl,
+    });
+
     return {
       id: weight.photo.id,
       userId: weight.photo.userId,
       weightId: weight.photo.weightId,
-      thumbnailUrl: weight.photo.thumbnailUrl,
-      mediumUrl: weight.photo.mediumUrl,
-      fullUrl: weight.photo.fullUrl,
+      thumbnailUrl: signedUrls.thumbnailUrl,
+      mediumUrl: signedUrls.mediumUrl,
+      fullUrl: signedUrls.fullUrl,
       createdAt: weight.photo.createdAt,
       updatedAt: weight.photo.updatedAt,
     };
   }
 
   async remove(id: number, userId: number) {
-    const weight = await this.findOne(id, userId);
+    const weight = await this.findOneRaw(id, userId);
 
     // Eliminar fotos asociadas del storage
     if (weight.photo) {

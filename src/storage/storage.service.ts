@@ -39,7 +39,7 @@ export class StorageService {
       ]);
 
       // Upload all sizes
-      const [thumbnailResult, mediumResult, fullResult] = await Promise.all([
+      const [thumbnailPath, mediumPath, fullPath] = await Promise.all([
         this.uploadBuffer(
           thumbnailBuffer,
           `${baseFileName}_thumbnail.${fileExtension}`,
@@ -51,10 +51,18 @@ export class StorageService {
         this.uploadBuffer(fullBuffer, `${baseFileName}_full.${fileExtension}`),
       ]);
 
+      // Generate signed URLs for all sizes
+      const [thumbnailSignedUrl, mediumSignedUrl, fullSignedUrl] =
+        await Promise.all([
+          this.createSignedUrl(thumbnailPath.filePath),
+          this.createSignedUrl(mediumPath.filePath),
+          this.createSignedUrl(fullPath.filePath),
+        ]);
+
       return {
-        thumbnailUrl: thumbnailResult.publicUrl,
-        mediumUrl: mediumResult.publicUrl,
-        fullUrl: fullResult.publicUrl,
+        thumbnailUrl: thumbnailSignedUrl,
+        mediumUrl: mediumSignedUrl,
+        fullUrl: fullSignedUrl,
       };
     } catch (error) {
       this.logger.error('Error uploading image:', error);
@@ -135,7 +143,7 @@ export class StorageService {
   private async uploadBuffer(
     buffer: Buffer,
     fileName: string,
-  ): Promise<{ publicUrl: string }> {
+  ): Promise<{ filePath: string }> {
     const { error } = await this.supabase.storage
       .from(this.bucketName)
       .upload(fileName, buffer, {
@@ -147,10 +155,62 @@ export class StorageService {
       throw error;
     }
 
-    const { data: publicUrlData } = this.supabase.storage
-      .from(this.bucketName)
-      .getPublicUrl(fileName);
+    return { filePath: fileName };
+  }
 
-    return { publicUrl: publicUrlData.publicUrl };
+  private async createSignedUrl(filePath: string): Promise<string> {
+    const { data, error } = await this.supabase.storage
+      .from(this.bucketName)
+      .createSignedUrl(filePath, 3600); // 1 hour
+
+    if (error) {
+      this.logger.error('Error creating signed URL:', error);
+      throw new Error('Error al crear URL firmada');
+    }
+
+    return data.signedUrl;
+  }
+
+  async getSignedUrlsForPhoto(photo: {
+    thumbnailUrl: string;
+    mediumUrl: string;
+    fullUrl: string;
+  }): Promise<{
+    thumbnailUrl: string;
+    mediumUrl: string;
+    fullUrl: string;
+  }> {
+    try {
+      // Extract file paths from stored URLs
+      const thumbnailPath = this.extractFilePathFromUrl(photo.thumbnailUrl);
+      const mediumPath = this.extractFilePathFromUrl(photo.mediumUrl);
+      const fullPath = this.extractFilePathFromUrl(photo.fullUrl);
+
+      // Generate new signed URLs
+      const [thumbnailSignedUrl, mediumSignedUrl, fullSignedUrl] =
+        await Promise.all([
+          this.createSignedUrl(thumbnailPath),
+          this.createSignedUrl(mediumPath),
+          this.createSignedUrl(fullPath),
+        ]);
+
+      return {
+        thumbnailUrl: thumbnailSignedUrl,
+        mediumUrl: mediumSignedUrl,
+        fullUrl: fullSignedUrl,
+      };
+    } catch (error) {
+      this.logger.error('Error getting signed URLs for photo:', error);
+      throw new Error('Error al obtener URLs firmadas');
+    }
+  }
+
+  private extractFilePathFromUrl(url: string): string {
+    // Extract file path from public URL
+    const urlParts = url.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    const userFolder = urlParts[urlParts.length - 3];
+    const weightFolder = urlParts[urlParts.length - 2];
+    return `${userFolder}/${weightFolder}/${fileName}`;
   }
 }

@@ -169,9 +169,17 @@ constructor(
 ) {}
 
 if (file) {
-  const photoUrls = await this.storage.uploadPhoto(file, userId, weightId);
-  // Returns: { thumbnailUrl, mediumUrl, fullUrl }
+  const photoUrls = await this.storage.uploadImage(file, userId, weightId);
+  // Returns: { thumbnailUrl, mediumUrl, fullUrl } - All URLs are pre-signed (1 hour expiry)
 }
+
+// For existing photos from DB, convert to signed URLs
+const signedUrls = await this.storage.getSignedUrlsForPhoto({
+  thumbnailUrl: photo.thumbnailUrl,
+  mediumUrl: photo.mediumUrl, 
+  fullUrl: photo.fullUrl,
+});
+// Returns signed URLs with 1 hour expiry for SwiftUI AsyncImage compatibility
 ```
 
 ## Business Logic Patterns
@@ -212,6 +220,8 @@ date: string;
 - **Path:** `{userId}/{weightId}/{timestamp}_{size}.{ext}`
 - **Constraint:** One photo per weight (DB level)
 - **Cleanup:** Deletes old files when weight deleted/updated
+- **URLs:** Pre-signed URLs with 1 hour expiry for SwiftUI AsyncImage compatibility
+- **Security:** Original public URLs stored in DB, signed URLs generated on-demand
 
 ## Adding New Endpoints - Step by Step
 
