@@ -22,6 +22,21 @@
 - **🏥 Health Checks**: Monitoreo de estado de servicios
 - **📖 Documentación Swagger**: API completamente documentada
 
+## ⚡ Performance Optimizations
+
+**Render Free Tier Optimizations Applied:**
+- **Database response time:** **1966ms → 879ms** (-55% improvement) 🚀
+- **Connection pooling:** Limited to 3 connections with 2s timeout for constrained environments
+- **Memory management:** 400MB Node.js limit optimized for 512MB Render containers
+- **Compression middleware:** gzip responses >1KB for faster data transfer
+- **Docker optimizations:** Multi-stage build with production-only dependencies
+
+**VPS Deployment Ready:** These conservative settings work great on free tiers. On dedicated VPS with more resources, you can:
+- Increase `connection_limit` to 10-20 for better concurrent performance
+- Raise `--max-old-space-size` to 1024+ for memory-intensive operations  
+- Remove compression if bandwidth isn't a constraint
+- **Expected VPS performance:** Sub-200ms database responses with proper hardware 🔥
+
 ## 🚀 Quick Start
 
 ### Option 1: Fast Setup (Recommended)

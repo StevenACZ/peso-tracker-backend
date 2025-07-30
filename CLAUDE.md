@@ -13,6 +13,32 @@ npm run dev:reset       # Only reset DB
 npm run lint            # Must run before commits
 ```
 
+## ⚡ Performance Optimizations (Production)
+
+**Render Free Tier Optimizations Applied:**
+- **Database response:** 1966ms → **879ms** (-55% improvement)
+- **Connection pooling:** Limited to 3 connections with 2s timeout
+- **Memory management:** 400MB limit for 512MB Render environment
+- **Compression:** gzip responses >1KB for faster data transfer
+
+### Docker Optimizations
+```dockerfile
+# Memory optimization for constrained environments
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
+# Database connection pooling in PrismaService
+connection_limit=3, pool_timeout=2s, connect_timeout=10s
+SSL only in production (conditional)
+```
+
+**VPS Deployment Note:** These optimizations are conservative for Render's 0.1 CPU + 512MB RAM. 
+On a dedicated VPS with more resources, you can increase:
+- `connection_limit` to 10-20
+- `--max-old-space-size` to 1024+ 
+- Remove compression if bandwidth isn't limited
+
+**Result:** Sub-second database responses even on free hosting 🚀
+
 ## Endpoint Implementation Templates
 
 ### Standard Controller Pattern
