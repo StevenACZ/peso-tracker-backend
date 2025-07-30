@@ -53,7 +53,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Memory optimization for Render's 512MB limit
-ENV NODE_OPTIONS="--max-old-space-size=400 --gc-interval=100 --optimize-for-size"
+ENV NODE_OPTIONS="--max-old-space-size=400 --optimize-for-size"
 
 # Environment variable to trigger database reset on first deploy
 ENV RESET_DATABASE=true
