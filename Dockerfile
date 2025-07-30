@@ -42,6 +42,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 
+# Ensure nestjs user owns everything including node_modules for Prisma generate
+RUN chown -R nestjs:nodejs /app/node_modules
+
 # Switch to non-root user
 USER nestjs
 
