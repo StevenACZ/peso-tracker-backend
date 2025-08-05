@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -15,16 +16,26 @@ export class PrismaService
   private readonly maxRetries = 5;
   private readonly initialRetryDelay = 1000; // 1 second
 
-  constructor() {
-    // Build connection URL with optimized pool settings for Render's limited resources
-    const databaseUrl = new URL(process.env.DATABASE_URL || '');
-    databaseUrl.searchParams.set('connection_limit', '3');
-    databaseUrl.searchParams.set('pool_timeout', '2');
-    databaseUrl.searchParams.set('connect_timeout', '10');
-    
-    // Only require SSL in production (Render/Supabase cloud)
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (isProduction) {
+  constructor(private config: ConfigService) {
+    // Get optimized connection settings for VPS multi-service environment
+    const databaseUrl = new URL(config.get<string>('database.url') || '');
+    const isProduction = config.get<string>('nodeEnv') === 'production';
+
+    // VPS-optimized connection settings (higher limits than constrained hosting)
+    const connectionLimit = isProduction ? '8' : '5'; // Higher for VPS
+    const poolTimeout = isProduction ? '5' : '3'; // More generous timeout
+    const connectTimeout = isProduction ? '15' : '10'; // Longer connect timeout
+
+    databaseUrl.searchParams.set('connection_limit', connectionLimit);
+    databaseUrl.searchParams.set('pool_timeout', poolTimeout);
+    databaseUrl.searchParams.set('connect_timeout', connectTimeout);
+
+    // For VPS deployments, SSL may not be required if using internal PostgreSQL
+    if (
+      isProduction &&
+      databaseUrl.hostname !== 'localhost' &&
+      databaseUrl.hostname !== 'postgres'
+    ) {
       databaseUrl.searchParams.set('sslmode', 'require');
     }
 
@@ -43,6 +54,13 @@ export class PrismaService
   }
 
   async onModuleInit() {
+    const isProduction = this.config.get<string>('nodeEnv') === 'production';
+    const databaseUrl = this.config.get<string>('database.url') || '';
+    const dbHost = new URL(databaseUrl).hostname;
+
+    this.logger.log(
+      `Initializing Prisma connection to ${dbHost} (${isProduction ? 'production' : 'development'} mode)`,
+    );
     await this.connectWithRetry();
   }
 
@@ -103,6 +121,52 @@ export class PrismaService
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Get database connection info for monitoring
+   * Useful for VPS multi-service environments
+   */
+  getConnectionInfo() {
+    const databaseUrl = this.config.get<string>('database.url') || '';
+    const parsedUrl = new URL(databaseUrl);
+
+    return {
+      host: parsedUrl.hostname,
+      port: parsedUrl.port || '5432',
+      database: parsedUrl.pathname.substring(1),
+      ssl: parsedUrl.searchParams.get('sslmode') === 'require',
+      connectionLimit:
+        parsedUrl.searchParams.get('connection_limit') || 'default',
+      environment: this.config.get<string>('nodeEnv') || 'development',
+    };
+  }
+
+  /**
+   * Test database connection with detailed response time
+   */
+  async testConnection(): Promise<{
+    success: boolean;
+    responseTime: number;
+    error?: string;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      await this.$queryRaw`SELECT 1 as test`;
+      const responseTime = Date.now() - startTime;
+
+      return { success: true, responseTime };
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      this.logger.error('Database connection test failed:', error.message);
+
+      return {
+        success: false,
+        responseTime,
+        error: error.message,
+      };
     }
   }
 }

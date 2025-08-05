@@ -10,6 +10,7 @@ import { WeightsModule } from './weights/weights.module';
 import { GoalsModule } from './goals/goals.module';
 import { HealthModule } from './health/health.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PhotosModule } from './photos/photos.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import configuration from './config/configuration';
 import { validate } from './config/env.validation';
@@ -33,6 +34,7 @@ import { validate } from './config/env.validation';
     GoalsModule,
     HealthModule,
     DashboardModule,
+    PhotosModule,
   ],
   controllers: [AppController],
   providers: [

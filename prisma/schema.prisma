@@ -53,7 +53,6 @@ model Photo {
   id           Int      @id @default(autoincrement())
   userId       Int      @map("user_id")
   weightId     Int      @unique @map("weight_id")
-  notes        String?
   thumbnailUrl String   @map("thumbnail_url")
   mediumUrl    String   @map("medium_url")
   fullUrl      String   @map("full_url")

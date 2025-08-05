@@ -36,21 +36,17 @@ class EnvironmentVariables {
   @IsNumberString()
   BCRYPT_SALT_ROUNDS?: string = '12';
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  SUPABASE_URL: string;
-
-  @IsString()
-  @IsNotEmpty()
-  SUPABASE_ANON_KEY: string;
-
-  @IsString()
-  @IsNotEmpty()
-  SUPABASE_SERVICE_ROLE_KEY: string;
+  UPLOADS_PATH?: string = '/app/uploads';
 
   @IsOptional()
   @IsString()
-  SUPABASE_STORAGE_BUCKET?: string = 'peso-tracker-photos';
+  BASE_URL?: string = 'http://localhost:3000';
+
+  @IsOptional()
+  @IsNumberString()
+  MAX_FILE_SIZE?: string = '5242880';
 
   @IsOptional()
   @IsString()

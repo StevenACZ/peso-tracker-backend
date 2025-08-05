@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database para desarrollo
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: peso-tracker-db-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: peso_tracker
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - peso_dev_network
+
+  # API PesoTracker para desarrollo
+  api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Solo build stage para desarrollo más rápido
+    container_name: peso-tracker-api-dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres-dev:5432/peso_tracker
+      DIRECT_URL: postgresql://postgres:postgres@postgres-dev:5432/peso_tracker
+      UPLOADS_PATH: /app/uploads
+      BASE_URL: http://localhost:3000
+      JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      JWT_EXPIRES_IN: 24h
+      BCRYPT_SALT_ROUNDS: 10
+      RATE_LIMIT_TTL: 300
+      RATE_LIMIT_LIMIT: 1000
+      FRONTEND_URL: http://localhost:3000
+      RESET_DATABASE: false
+    volumes:
+      - .:/app  # Montar código para desarrollo en tiempo real
+      - /app/node_modules  # Excluir node_modules del mount
+      - uploads_dev_data:/app/uploads
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    # APLICAR SCHEMA PRISMA ANTES DE INICIAR API
+    command: ["sh", "-c", "npx prisma db push && npm run start:dev"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - peso_dev_network
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  uploads_dev_data:
+    driver: local
+
+networks:
+  peso_dev_network:
+    driver: bridge

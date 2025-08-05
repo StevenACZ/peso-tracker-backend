@@ -22,7 +22,7 @@ export class WeightsService {
     createWeightDto: CreateWeightDto,
     file?: Express.Multer.File,
   ) {
-    const { weight, date, notes, photoNotes } = createWeightDto;
+    const { weight, date, notes } = createWeightDto;
 
     try {
       const weightRecord = await this.prisma.weight.create({
@@ -50,7 +50,6 @@ export class WeightsService {
             data: {
               userId,
               weightId: weightRecord.id,
-              notes: photoNotes,
               thumbnailUrl: imageUrls.thumbnailUrl,
               mediumUrl: imageUrls.mediumUrl,
               fullUrl: imageUrls.fullUrl,
@@ -144,7 +143,7 @@ export class WeightsService {
             thumbnailUrl: weight.photos.thumbnailUrl,
             mediumUrl: weight.photos.mediumUrl,
             fullUrl: weight.photos.fullUrl,
-          });
+          }, userId);
           photo = {
             id: weight.photos.id,
             userId: weight.photos.userId,
@@ -563,7 +562,7 @@ export class WeightsService {
           thumbnailUrl: weight.photos!.thumbnailUrl,
           mediumUrl: weight.photos!.mediumUrl,
           fullUrl: weight.photos!.fullUrl,
-        });
+        }, userId);
         return {
           id: weight.id,
           weight: Number(weight.weight),
@@ -573,7 +572,6 @@ export class WeightsService {
             id: weight.photos!.id,
             userId: weight.photos!.userId,
             weightId: weight.photos!.weightId,
-            notes: weight.photos!.notes,
             thumbnailUrl: signedUrls.thumbnailUrl,
             mediumUrl: signedUrls.mediumUrl,
             fullUrl: signedUrls.fullUrl,
@@ -686,7 +684,7 @@ export class WeightsService {
         thumbnailUrl: weight.photos.thumbnailUrl,
         mediumUrl: weight.photos.mediumUrl,
         fullUrl: weight.photos.fullUrl,
-      });
+      }, userId);
       photo = {
         id: weight.photos.id,
         userId: weight.photos.userId,
@@ -713,7 +711,7 @@ export class WeightsService {
     file?: Express.Multer.File,
   ) {
     const existingWeight = await this.findOneRaw(id, userId);
-    const { photoNotes, ...weightData } = updateWeightDto;
+    const { ...weightData } = updateWeightDto;
 
     try {
       // Actualizar el registro de peso
@@ -756,7 +754,6 @@ export class WeightsService {
             data: {
               userId,
               weightId: id,
-              notes: photoNotes,
               thumbnailUrl: imageUrls.thumbnailUrl,
               mediumUrl: imageUrls.mediumUrl,
               fullUrl: imageUrls.fullUrl,
@@ -782,33 +779,7 @@ export class WeightsService {
         }
       }
 
-      // Si solo se actualizan las notas de la foto existente
-      if (photoNotes !== undefined && existingWeight.photo) {
-        const updatedPhoto = await this.prisma.photo.update({
-          where: { id: existingWeight.photo.id },
-          data: { notes: photoNotes },
-        });
-
-        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
-          thumbnailUrl: updatedPhoto.thumbnailUrl,
-          mediumUrl: updatedPhoto.mediumUrl,
-          fullUrl: updatedPhoto.fullUrl,
-        });
-        return {
-          ...updatedWeight,
-          photo: {
-            id: updatedPhoto.id,
-            userId: updatedPhoto.userId,
-            weightId: updatedPhoto.weightId,
-            thumbnailUrl: signedUrls.thumbnailUrl,
-            mediumUrl: signedUrls.mediumUrl,
-            fullUrl: signedUrls.fullUrl,
-            createdAt: updatedPhoto.createdAt,
-            updatedAt: updatedPhoto.updatedAt,
-          },
-          photos: undefined,
-        };
-      }
+      // Photo handling removed - only weight notes supported
 
       let photo: {
         id: number;
@@ -825,7 +796,7 @@ export class WeightsService {
           thumbnailUrl: updatedWeight.photos.thumbnailUrl,
           mediumUrl: updatedWeight.photos.mediumUrl,
           fullUrl: updatedWeight.photos.fullUrl,
-        });
+        }, userId);
         photo = {
           id: updatedWeight.photos.id,
           userId: updatedWeight.photos.userId,
@@ -865,7 +836,7 @@ export class WeightsService {
       thumbnailUrl: weight.photo.thumbnailUrl,
       mediumUrl: weight.photo.mediumUrl,
       fullUrl: weight.photo.fullUrl,
-    });
+    }, userId);
 
     return {
       id: weight.photo.id,

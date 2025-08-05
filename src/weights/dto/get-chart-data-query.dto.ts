@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsIn, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 
 export class GetChartDataQueryDto {
   @ApiProperty({

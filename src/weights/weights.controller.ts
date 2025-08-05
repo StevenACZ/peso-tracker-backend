@@ -64,13 +64,8 @@ export class WeightsController {
         },
         notes: {
           type: 'string',
-          example: 'Peso de prueba',
+          example: 'Peso después del gimnasio',
           description: 'Notas adicionales',
-        },
-        photoNotes: {
-          type: 'string',
-          example: 'Foto de progreso',
-          description: 'Notas de la foto',
         },
         photo: {
           type: 'string',
@@ -299,13 +294,8 @@ export class WeightsController {
         },
         notes: {
           type: 'string',
-          example: 'Peso actualizado',
+          example: 'Peso actualizado después del entrenamiento',
           description: 'Notas adicionales',
-        },
-        photoNotes: {
-          type: 'string',
-          example: 'Foto actualizada',
-          description: 'Notas de la foto',
         },
         photo: {
           type: 'string',
@@ -324,7 +314,7 @@ export class WeightsController {
   @ApiResponse({ status: 404, description: 'Registro de peso no encontrado.' })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: number },
     @Body() updateWeightDto: UpdateWeightDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
@@ -340,7 +330,10 @@ export class WeightsController {
   })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Registro de peso no encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: { id: number },
+  ) {
     return this.weightsService.remove(id, user.id);
   }
 }

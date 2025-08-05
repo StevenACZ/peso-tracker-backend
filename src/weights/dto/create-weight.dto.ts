@@ -31,20 +31,11 @@ export class CreateWeightDto {
   date: string;
 
   @ApiPropertyOptional({
-    example: 'Peso de prueba',
+    example: 'Peso después del gimnasio',
     description: 'Notas adicionales',
   })
   @Expose()
   @IsOptional()
   @IsString()
   notes?: string;
-
-  @ApiPropertyOptional({
-    example: 'Notas de la foto',
-    description: 'Notas adicionales para la foto',
-  })
-  @Expose()
-  @IsOptional()
-  @IsString()
-  photoNotes?: string;
 }

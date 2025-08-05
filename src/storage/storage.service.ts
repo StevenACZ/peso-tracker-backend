@@ -1,20 +1,45 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as jwt from 'jsonwebtoken';
 import * as sharp from 'sharp';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private supabase: SupabaseClient;
-  private readonly bucketName: string;
+  private readonly uploadsPath: string;
+  private readonly baseUrl: string;
+  private readonly maxFileSize: number;
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-    this.bucketName =
-      process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos';
+  private readonly allowedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+  ];
+
+  constructor(
+    private config: ConfigService,
+  ) {
+    this.uploadsPath =
+      this.config.get<string>('storage.uploadsPath') || '/app/uploads';
+    this.baseUrl =
+      this.config.get<string>('storage.baseUrl') || 'http://localhost:3000';
+    this.maxFileSize =
+      this.config.get<number>('storage.maxFileSize') || 5242880; // 5MB
+
+    // Ensure uploads directory exists
+    void this.ensureUploadsDirectory();
+  }
+
+  private async ensureUploadsDirectory() {
+    try {
+      await fs.access(this.uploadsPath);
+    } catch {
+      await fs.mkdir(this.uploadsPath, { recursive: true });
+      this.logger.log(`Created uploads directory: ${this.uploadsPath}`);
+    }
   }
 
   async uploadImage(
@@ -26,11 +51,29 @@ export class StorageService {
     mediumUrl: string;
     fullUrl: string;
   }> {
+    // Validate file type
+    if (!this.allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Tipo de archivo no permitido. Solo se aceptan: ${this.allowedMimeTypes.join(', ')}`,
+      );
+    }
+
+    // Validate file size
+    if (file.size > this.maxFileSize) {
+      throw new BadRequestException(
+        `Archivo muy grande. Tamaño máximo: ${Math.round(this.maxFileSize / 1024 / 1024)}MB`,
+      );
+    }
+
     const timestamp = Date.now();
-    const fileExtension = file.originalname.split('.').pop();
-    const baseFileName = `${userId}/${weightId}/${timestamp}`;
+    const fileExtension = this.getFileExtension(file.mimetype);
+    const userDir = path.join(this.uploadsPath, userId.toString());
+    const weightDir = path.join(userDir, weightId.toString());
 
     try {
+      // Ensure user and weight directories exist
+      await fs.mkdir(weightDir, { recursive: true });
+
       // Process images in different sizes
       const [thumbnailBuffer, mediumBuffer, fullBuffer] = await Promise.all([
         this.resizeImage(file.buffer, 150, 150),
@@ -38,35 +81,49 @@ export class StorageService {
         this.resizeImage(file.buffer, 800, 800),
       ]);
 
-      // Upload all sizes
-      const [thumbnailPath, mediumPath, fullPath] = await Promise.all([
-        this.uploadBuffer(
-          thumbnailBuffer,
-          `${baseFileName}_thumbnail.${fileExtension}`,
-        ),
-        this.uploadBuffer(
-          mediumBuffer,
-          `${baseFileName}_medium.${fileExtension}`,
-        ),
-        this.uploadBuffer(fullBuffer, `${baseFileName}_full.${fileExtension}`),
+      // Save all sizes to filesystem
+      const thumbnailPath = path.join(
+        weightDir,
+        `${timestamp}_thumbnail.${fileExtension}`,
+      );
+      const mediumPath = path.join(
+        weightDir,
+        `${timestamp}_medium.${fileExtension}`,
+      );
+      const fullPath = path.join(
+        weightDir,
+        `${timestamp}_full.${fileExtension}`,
+      );
+
+      await Promise.all([
+        fs.writeFile(thumbnailPath, thumbnailBuffer),
+        fs.writeFile(mediumPath, mediumBuffer),
+        fs.writeFile(fullPath, fullBuffer),
       ]);
 
-      // Generate signed URLs for all sizes
-      const [thumbnailSignedUrl, mediumSignedUrl, fullSignedUrl] =
-        await Promise.all([
-          this.createSignedUrl(thumbnailPath.filePath),
-          this.createSignedUrl(mediumPath.filePath),
-          this.createSignedUrl(fullPath.filePath),
-        ]);
+      // Generate public URLs
+      const thumbnailUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_thumbnail.${fileExtension}`;
+      const mediumUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_medium.${fileExtension}`;
+      const fullUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_full.${fileExtension}`;
 
       return {
-        thumbnailUrl: thumbnailSignedUrl,
-        mediumUrl: mediumSignedUrl,
-        fullUrl: fullSignedUrl,
+        thumbnailUrl,
+        mediumUrl,
+        fullUrl,
       };
     } catch (error) {
-      this.logger.error('Error uploading image:', error);
-      throw new Error('Error al subir la imagen');
+      this.logger.error(
+        `Error uploading image for user ${userId}, weight ${weightId}:`,
+        error,
+      );
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        'Error al procesar la imagen. Verifique que el archivo sea una imagen válida.',
+      );
     }
   }
 
@@ -75,18 +132,15 @@ export class StorageService {
       // Extract file path from URL
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
-      const userFolder = urlParts[urlParts.length - 3];
-      const weightFolder = urlParts[urlParts.length - 2];
-      const filePath = `${userFolder}/${weightFolder}/${fileName}`;
+      const userId = urlParts[urlParts.length - 3];
+      const weightId = urlParts[urlParts.length - 2];
 
-      const { error } = await this.supabase.storage
-        .from(this.bucketName)
-        .remove([filePath]);
+      const filePath = path.join(this.uploadsPath, userId, weightId, fileName);
 
-      if (error) {
-        this.logger.error('Error deleting image:', error);
-        throw new Error('Error al eliminar la imagen');
-      }
+      // Delete file from filesystem
+      await fs.unlink(filePath);
+
+      this.logger.log(`Deleted image: ${filePath}`);
     } catch (error) {
       this.logger.error('Error deleting image:', error);
       // Don't throw error for deletion failures to avoid blocking other operations
@@ -98,29 +152,44 @@ export class StorageService {
     weightId: number,
   ): Promise<void> {
     try {
-      const folderPath = `${userId}/${weightId}/`;
+      const weightDir = path.join(
+        this.uploadsPath,
+        userId.toString(),
+        weightId.toString(),
+      );
 
-      // List all files in the folder
-      const { data: files, error: listError } = await this.supabase.storage
-        .from(this.bucketName)
-        .list(folderPath);
-
-      if (listError) {
-        this.logger.error('Error listing files:', listError);
+      // Check if directory exists
+      try {
+        await fs.access(weightDir);
+      } catch {
+        // Directory doesn't exist, nothing to delete
         return;
       }
 
-      if (files && files.length > 0) {
-        const filePaths = files.map((file) => `${folderPath}${file.name}`);
+      // List all files in the directory
+      const files = await fs.readdir(weightDir);
 
-        const { error: deleteError } = await this.supabase.storage
-          .from(this.bucketName)
-          .remove(filePaths);
+      // Delete all files
+      await Promise.all(
+        files.map((file) =>
+          fs
+            .unlink(path.join(weightDir, file))
+            .catch((err) =>
+              this.logger.error(`Error deleting file ${file}:`, err),
+            ),
+        ),
+      );
 
-        if (deleteError) {
-          this.logger.error('Error deleting files:', deleteError);
-        }
-      }
+      // Remove the empty directory
+      await fs
+        .rmdir(weightDir)
+        .catch((err) =>
+          this.logger.error(`Error removing directory ${weightDir}:`, err),
+        );
+
+      this.logger.log(
+        `Deleted all images for weight ${weightId} of user ${userId}`,
+      );
     } catch (error) {
       this.logger.error('Error deleting images for weight:', error);
     }
@@ -140,77 +209,72 @@ export class StorageService {
       .toBuffer();
   }
 
-  private async uploadBuffer(
-    buffer: Buffer,
-    fileName: string,
-  ): Promise<{ filePath: string }> {
-    const { error } = await this.supabase.storage
-      .from(this.bucketName)
-      .upload(fileName, buffer, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
+  /**
+   * Genera una URL segura firmada con JWT que expira
+   * @param photoPath Path relativo de la imagen (ej: "uploads/1/1/imagen.jpg")
+   * @param userId ID del usuario dueño de la imagen
+   * @param expiresInSeconds Expiración en segundos (default: 1h para producción)
+   */
+  generateSecurePhotoUrl(
+    photoPath: string,
+    userId: number,
+    expiresInSeconds: number = 3600,
+  ): string {
+    // Limpiar el path para asegurar formato correcto
+    const cleanPath = photoPath.replace(/^https?:\/\/[^\/]+\//, '');
+    
+    const payload = {
+      path: cleanPath,
+      userId: userId,
+      exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+    };
 
-    if (error) {
-      throw error;
+    const secret = this.config.get<string>('jwt.secret');
+    if (!secret) {
+      throw new BadRequestException('JWT secret not configured');
     }
-
-    return { filePath: fileName };
+    const token = jwt.sign(payload, secret);
+    return `${this.baseUrl}/photos/secure/${token}`;
   }
 
-  private async createSignedUrl(filePath: string): Promise<string> {
-    const { data, error } = await this.supabase.storage
-      .from(this.bucketName)
-      .createSignedUrl(filePath, 3600); // 1 hour
-
-    if (error) {
-      this.logger.error('Error creating signed URL:', error);
-      throw new Error('Error al crear URL firmada');
-    }
-
-    return data.signedUrl;
-  }
-
-  async getSignedUrlsForPhoto(photo: {
+  getSignedUrlsForPhoto(
+    photo: {
+      thumbnailUrl: string;
+      mediumUrl: string;
+      fullUrl: string;
+    },
+    userId: number,
+  ): {
     thumbnailUrl: string;
     mediumUrl: string;
     fullUrl: string;
-  }): Promise<{
-    thumbnailUrl: string;
-    mediumUrl: string;
-    fullUrl: string;
-  }> {
+  } {
+    // Generar URLs temporales firmadas con JWT (1h para producción)
+    return {
+      thumbnailUrl: this.generateSecurePhotoUrl(photo.thumbnailUrl, userId),
+      mediumUrl: this.generateSecurePhotoUrl(photo.mediumUrl, userId),
+      fullUrl: this.generateSecurePhotoUrl(photo.fullUrl, userId),
+    };
+  }
+
+  private getFileExtension(mimeType: string): string {
+    const extensions: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+
+    return extensions[mimeType] || 'jpg';
+  }
+
+  cleanupOrphanedFiles(): void {
     try {
-      // Extract file paths from stored URLs
-      const thumbnailPath = this.extractFilePathFromUrl(photo.thumbnailUrl);
-      const mediumPath = this.extractFilePathFromUrl(photo.mediumUrl);
-      const fullPath = this.extractFilePathFromUrl(photo.fullUrl);
-
-      // Generate new signed URLs
-      const [thumbnailSignedUrl, mediumSignedUrl, fullSignedUrl] =
-        await Promise.all([
-          this.createSignedUrl(thumbnailPath),
-          this.createSignedUrl(mediumPath),
-          this.createSignedUrl(fullPath),
-        ]);
-
-      return {
-        thumbnailUrl: thumbnailSignedUrl,
-        mediumUrl: mediumSignedUrl,
-        fullUrl: fullSignedUrl,
-      };
+      this.logger.log('Starting cleanup of orphaned files...');
+      // Implementation for cleaning up orphaned files would go here
+      // This is a placeholder for future enhancement
     } catch (error) {
-      this.logger.error('Error getting signed URLs for photo:', error);
-      throw new Error('Error al obtener URLs firmadas');
+      this.logger.error('Error during cleanup:', error);
     }
-  }
-
-  private extractFilePathFromUrl(url: string): string {
-    // Extract file path from public URL
-    const urlParts = url.split('/');
-    const fileName = urlParts[urlParts.length - 1];
-    const userFolder = urlParts[urlParts.length - 3];
-    const weightFolder = urlParts[urlParts.length - 2];
-    return `${userFolder}/${weightFolder}/${fileName}`;
   }
 }

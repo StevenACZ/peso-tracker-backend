@@ -1,32 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
-  private supabase: SupabaseClient;
+  private readonly uploadsPath: string;
 
-  constructor(private prisma: PrismaService) {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!,
-    );
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+  ) {
+    this.uploadsPath =
+      this.config.get<string>('UPLOADS_PATH') || '/app/uploads';
   }
 
   async check() {
     const timestamp = new Date().toISOString();
 
-    const [database, supabase] = await Promise.allSettled([
+    const [database, storage] = await Promise.allSettled([
       this.checkDatabase(),
-      this.checkSupabase(),
+      this.checkStorage(),
     ]);
 
     const status =
       database.status === 'fulfilled' &&
-      supabase.status === 'fulfilled' &&
+      storage.status === 'fulfilled' &&
       database.value.status === 'healthy' &&
-      supabase.value.status === 'healthy'
+      storage.value.status === 'healthy'
         ? 'healthy'
         : 'unhealthy';
 
@@ -34,17 +37,17 @@ export class HealthService {
       status,
       timestamp,
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: this.config.get<string>('NODE_ENV') || 'development',
       version: process.env.npm_package_version || '1.0.0',
       checks: {
         database:
           database.status === 'fulfilled'
             ? database.value
             : { status: 'unhealthy', error: database.reason },
-        supabase:
-          supabase.status === 'fulfilled'
-            ? supabase.value
-            : { status: 'unhealthy', error: supabase.reason },
+        storage:
+          storage.status === 'fulfilled'
+            ? storage.value
+            : { status: 'unhealthy', error: storage.reason },
       },
     };
   }
@@ -70,38 +73,45 @@ export class HealthService {
     }
   }
 
-  async checkSupabase() {
+  async checkStorage() {
     try {
       const startTime = Date.now();
 
-      // Test Supabase connection by trying to get user (will fail but connection works)
-      await this.supabase.auth.getUser();
+      // Check if uploads directory exists and is writable
+      await fs.access(this.uploadsPath, fs.constants.F_OK | fs.constants.W_OK);
+
+      // Test by creating a temporary file
+      const testFile = path.join(this.uploadsPath, '.health-check');
+      await fs.writeFile(testFile, 'health-check');
+      await fs.unlink(testFile);
 
       const responseTime = Date.now() - startTime;
 
       return {
         status: 'healthy',
         responseTime: `${responseTime}ms`,
-        message: 'Supabase connection successful',
+        message: 'File storage accessible and writable',
+        path: this.uploadsPath,
       };
     } catch (error) {
-      // If it's an auth error, Supabase is actually working
-      if (
-        error.message?.includes('JWT') ||
-        error.message?.includes('session')
-      ) {
+      this.logger.error('Storage health check failed:', error);
+
+      // Try to create directory if it doesn't exist
+      try {
+        await fs.mkdir(this.uploadsPath, { recursive: true });
         return {
           status: 'healthy',
-          message: 'Supabase connection successful',
+          message: 'Storage directory created successfully',
+          path: this.uploadsPath,
+        };
+      } catch (createError) {
+        return {
+          status: 'unhealthy',
+          message: 'Storage directory not accessible',
+          error: createError.message,
+          path: this.uploadsPath,
         };
       }
-
-      this.logger.error('Supabase health check failed:', error);
-      return {
-        status: 'unhealthy',
-        message: 'Supabase connection failed',
-        error: error.message,
-      };
     }
   }
 }

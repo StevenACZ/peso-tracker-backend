@@ -32,18 +32,10 @@ export class UpdateWeightDto {
   date?: string;
 
   @ApiPropertyOptional({
-    example: 'Peso actualizado',
+    example: 'Peso actualizado después del entrenamiento',
     description: 'Notas adicionales',
   })
   @IsOptional()
   @IsString()
   notes?: string;
-
-  @ApiPropertyOptional({
-    example: 'Notas de la foto actualizadas',
-    description: 'Notas adicionales para la foto',
-  })
-  @IsOptional()
-  @IsString()
-  photoNotes?: string;
 }

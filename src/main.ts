@@ -6,9 +6,11 @@ import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import * as compression from 'compression';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
@@ -18,10 +20,12 @@ async function bootstrap() {
   const corsConfig = configService.get('cors');
 
   // Compression middleware (reduce response sizes)
-  app.use(compression({
-    threshold: 1024, // Only compress responses > 1KB
-    level: 6, // Balance between compression ratio and CPU usage
-  }));
+  app.use(
+    compression({
+      threshold: 1024, // Only compress responses > 1KB
+      level: 6, // Balance between compression ratio and CPU usage
+    }),
+  );
 
   // Security middleware
   app.use(
@@ -37,6 +41,17 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
+
+  // Static file serving for uploads
+  const uploadsPath = configService.get<string>('storage.uploadsPath') || '/app/uploads';
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads/',
+    setHeaders: (res) => {
+      // Cache images for 1 day
+      res.set('Cache-Control', 'public, max-age=86400');
+    },
+  });
+  logger.log(`Static files served from: ${uploadsPath} at /uploads/`);
 
   // Global validation pipe
   app.useGlobalPipes(

@@ -24,12 +24,10 @@ export default () => {
       ),
     },
 
-    supabase: {
-      url: process.env.SUPABASE_URL,
-      anonKey: process.env.SUPABASE_ANON_KEY,
-      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      storageBucket:
-        process.env.SUPABASE_STORAGE_BUCKET || 'peso-tracker-photos',
+    storage: {
+      uploadsPath: process.env.UPLOADS_PATH || '/app/uploads',
+      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+      maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default
     },
 
     cors: {

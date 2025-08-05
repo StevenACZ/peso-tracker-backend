@@ -44,24 +44,42 @@ $RECYCLE.BIN/
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Environment variables
-.env
-.env.local
-.env.test
-.env.production
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Allow .env.development for local Supabase setup
+# Environment variables (SEGURIDAD CRÍTICA)
+.env*
 !.env.development
+!.env.example
+
+# Archivos de configuración sensibles
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa*
+*.pub
 
 # Prisma
 /prisma/migrations/
 /generated/prisma
 
-# Supabase
-.supabase/
+# VPS deployment files y datos personales
+backup.sh
+deploy.sh
+setup-ssl.sh
+nginx-proxy/
+MIGRATION-SUMMARY.md
+README-VPS-DEPLOY.md
+RENDER_DEPLOYMENT.md
+scripts/
+docker-compose.external-db.yml
+
+# Datos personales y backups
+uploads/
+*.sql
+*.dump
+*.backup
+backups/
+datos_personales/
 
 # Temporary files
 /tmp

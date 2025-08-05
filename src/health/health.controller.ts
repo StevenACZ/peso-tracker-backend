@@ -27,13 +27,15 @@ export class HealthController {
     return this.healthService.checkDatabase();
   }
 
-  @Get('supabase')
-  @ApiOperation({ summary: 'Comprobar el estado de Supabase' })
+  @Get('storage')
+  @ApiOperation({
+    summary: 'Comprobar el estado del almacenamiento de archivos',
+  })
   @ApiResponse({
     status: 200,
-    description: 'El estado de Supabase.',
+    description: 'El estado del sistema de archivos para uploads.',
   })
-  async checkSupabase() {
-    return this.healthService.checkSupabase();
+  async checkStorage() {
+    return this.healthService.checkStorage();
   }
 }

@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (opcional - puedes usar DB externa)
+  postgres:
+    image: postgres:15-alpine
+    container_name: api-pesotracker-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: peso_tracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pesotracker_network
+
+  # API PesoTracker
+  api-pesotracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-pesotracker
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/peso_tracker
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/peso_tracker
+      UPLOADS_PATH: /app/uploads
+      BASE_URL: https://tu-dominio.com
+      JWT_SECRET: 1407af83110f662da0a79b671a262e32219cfae6aed74a0fc853809d1c2cc289
+      JWT_EXPIRES_IN: 24h
+      BCRYPT_SALT_ROUNDS: 12
+      RATE_LIMIT_TTL: 60
+      RATE_LIMIT_LIMIT: 100
+      FRONTEND_URL: https://tu-dominio.com
+      RESET_DATABASE: false
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - pesotracker_network
+      - web
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  pesotracker_network:
+    driver: bridge
+  web:
+    external: true
+    # Esta red debe ser creada externamente: docker network create web
