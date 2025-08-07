@@ -40,7 +40,7 @@ RUN npm ci --only=production && npm cache clean --force && rm -rf /tmp/*
 # Copy built application and essential files  
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
+#COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 
 # Ensure nestjs user owns everything including node_modules for Prisma generate
 RUN chown -R nestjs:nodejs /app/node_modules
@@ -62,7 +62,9 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV RESET_DATABASE=false
 
 # Create uploads directory
+USER root
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
+USER nestjs
 
 # Start script that handles database reset and app startup
 CMD ["sh", "-c", "if [ \"$RESET_DATABASE\" = \"true\" ]; then echo 'Resetting database...' && npx prisma db push --force-reset; else npx prisma db push; fi && dumb-init node dist/main"]
