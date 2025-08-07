@@ -64,6 +64,7 @@ ENV RESET_DATABASE=false
 # Create uploads directory
 USER root
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads && chmod -R 755 /app/uploads
+RUN chmod 775 /app/uploads
 USER nestjs
 
 # Start script that handles database reset and app startup
