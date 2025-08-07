@@ -70,7 +70,6 @@ nginx-proxy/
 MIGRATION-SUMMARY.md
 README-VPS-DEPLOY.md
 RENDER_DEPLOYMENT.md
-scripts/
 docker-compose.external-db.yml
 
 # Datos personales y backups
