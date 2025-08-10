@@ -3,6 +3,10 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
+import { ResetPasswordWithCodeDto } from './dto/reset-password-with-code.dto';
 import { ApiBody, ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
@@ -142,5 +146,134 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Debe proporcionar al menos username o email.' })
   async checkAvailability(@Body() checkDto: CheckAvailabilityDto) {
     return this.authService.checkAvailability(checkDto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Solicitar restablecimiento de contraseña',
+    description: 'Envía un email con un enlace para restablecer la contraseña.',
+  })
+  @ApiBody({
+    type: ForgotPasswordDto,
+    examples: {
+      'Email de usuario': {
+        summary: 'Solicitar reset para un email',
+        value: {
+          email: 'user@example.com',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email de restablecimiento enviado (si el email existe).',
+    schema: {
+      example: {
+        message: 'Si el email existe, recibirás un enlace de restablecimiento.',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Email inválido.' })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Restablecer contraseña',
+    description: 'Cambia la contraseña usando un token válido de restablecimiento.',
+  })
+  @ApiBody({
+    type: ResetPasswordDto,
+    examples: {
+      'Reset con token': {
+        summary: 'Restablecer contraseña con token',
+        value: {
+          token: 'abc123def456',
+          newPassword: 'newSecurePassword123',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida exitosamente.',
+    schema: {
+      example: {
+        message: 'Contraseña restablecida exitosamente.',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Token inválido, expirado o datos incorrectos.' })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('verify-reset-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verificar código de restablecimiento',
+    description: 'Verifica si un código de 6 dígitos es válido para restablecer contraseña.',
+  })
+  @ApiBody({
+    type: VerifyResetCodeDto,
+    examples: {
+      'Verificar código': {
+        summary: 'Verificar código recibido por email',
+        value: {
+          email: 'user@example.com',
+          code: '892934',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Código verificado exitosamente.',
+    schema: {
+      example: {
+        valid: true,
+        tempToken: 'abc123def456...',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado.' })
+  async verifyResetCode(@Body() verifyCodeDto: VerifyResetCodeDto) {
+    return this.authService.verifyResetCode(verifyCodeDto);
+  }
+
+  @Post('reset-password-with-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Restablecer contraseña con código',
+    description: 'Cambia la contraseña usando un código de 6 dígitos válido.',
+  })
+  @ApiBody({
+    type: ResetPasswordWithCodeDto,
+    examples: {
+      'Reset con código': {
+        summary: 'Restablecer contraseña con código de 6 dígitos',
+        value: {
+          email: 'user@example.com',
+          code: '892934',
+          newPassword: 'newSecurePassword123',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida exitosamente.',
+    schema: {
+      example: {
+        message: 'Contraseña restablecida exitosamente.',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido, expirado o datos incorrectos.' })
+  async resetPasswordWithCode(@Body() resetWithCodeDto: ResetPasswordWithCodeDto) {
+    return this.authService.resetPasswordWithCode(resetWithCodeDto);
   }
 }

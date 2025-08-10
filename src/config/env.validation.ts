@@ -59,6 +59,18 @@ class EnvironmentVariables {
   @IsOptional()
   @IsNumberString()
   RATE_LIMIT_LIMIT?: string = '100';
+
+  @IsString()
+  @IsNotEmpty()
+  RESEND_API_KEY: string;
+
+  @IsOptional()
+  @IsString()
+  FROM_EMAIL?: string = 'onboarding@resend.dev';
+
+  @IsOptional()
+  @IsString()
+  FROM_NAME?: string = 'Peso Tracker';
 }
 
 export function validate(config: Record<string, unknown>) {

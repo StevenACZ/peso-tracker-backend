@@ -9,13 +9,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
+import { ResetPasswordWithCodeDto } from './dto/reset-password-with-code.dto';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(userId: number): Promise<any> {
@@ -146,5 +153,222 @@ export class AuthService {
     };
 
     return result;
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+
+    // Find user by email
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, username: true },
+    });
+
+    // Always return success for security (don't reveal if email exists)
+    if (!user) {
+      return {
+        message: 'Si el email existe, recibirás un código de restablecimiento.',
+      };
+    }
+
+    try {
+      // Invalidate any existing reset codes for this user
+      await this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, used: false },
+        data: { used: true },
+      });
+
+      // Generate 6-digit code
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Save reset code to database
+      await this.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          code: resetCode,
+          expiresAt,
+        },
+      });
+
+      // Send reset email with code
+      await this.emailService.sendPasswordResetCode(
+        user.email,
+        user.username,
+        resetCode,
+      );
+
+      return {
+        message: 'Si el email existe, recibirás un código de restablecimiento.',
+      };
+    } catch (error) {
+      // Log the error but don't expose it to the user
+      console.error('Error in forgotPassword:', error);
+      return {
+        message: 'Si el email existe, recibirás un código de restablecimiento.',
+      };
+    }
+  }
+
+  async verifyResetCode(verifyCodeDto: VerifyResetCodeDto) {
+    const { email, code } = verifyCodeDto;
+    // Find user by email
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Código inválido');
+    }
+
+    // Find valid reset code
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        code,
+        used: false,
+        expiresAt: { gte: new Date() },
+        attempts: { lt: 3 }, // Max 3 attempts
+      },
+    });
+
+    if (!resetToken) {
+      // Increment attempts for existing codes
+      await this.prisma.passwordResetToken.updateMany({
+        where: {
+          userId: user.id,
+          code,
+          used: false,
+          expiresAt: { gte: new Date() },
+        },
+        data: {
+          attempts: { increment: 1 },
+        },
+      });
+
+      throw new BadRequestException('Código inválido o expirado');
+    }
+
+    // Generate temporary token for password reset
+    const tempToken = crypto.randomBytes(32).toString('hex');
+    
+    return {
+      valid: true,
+      tempToken, // This will be used for the final password reset
+    };
+  }
+
+  async resetPasswordWithCode(resetWithCodeDto: ResetPasswordWithCodeDto) {
+    const { email, code, newPassword } = resetWithCodeDto;
+
+    // Find user by email
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email inválido');
+    }
+
+    // Find valid reset code
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        code,
+        used: false,
+        expiresAt: { gte: new Date() },
+        attempts: { lt: 3 },
+      },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Código inválido o expirado');
+    }
+
+    try {
+      // Hash new password
+      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update user password and mark code as used
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: user.id },
+          data: { password: hashedPassword },
+        }),
+        this.prisma.passwordResetToken.update({
+          where: { id: resetToken.id },
+          data: { used: true },
+        }),
+      ]);
+
+      return {
+        message: 'Contraseña restablecida exitosamente.',
+      };
+    } catch (error) {
+      throw new BadRequestException('Error al restablecer la contraseña');
+    }
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { token, newPassword } = resetPasswordDto;
+
+    // Find valid reset code (keeping old method for backward compatibility)
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        code: token, // Now looking for code instead of token
+        used: false,
+        expiresAt: { gte: new Date() },
+        attempts: { lt: 3 },
+      },
+      include: { user: true },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException(
+        'Código de restablecimiento inválido o expirado',
+      );
+    }
+
+    try {
+      // Hash new password
+      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update user password and mark code as used
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: resetToken.userId },
+          data: { password: hashedPassword },
+        }),
+        this.prisma.passwordResetToken.update({
+          where: { id: resetToken.id },
+          data: { used: true },
+        }),
+      ]);
+
+      return {
+        message: 'Contraseña restablecida exitosamente.',
+      };
+    } catch (error) {
+      throw new BadRequestException('Error al restablecer la contraseña');
+    }
+  }
+
+  async verifyResetToken(code: string) {
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        code,
+        used: false,
+        expiresAt: { gte: new Date() },
+      },
+      select: { id: true },
+    });
+
+    return {
+      valid: !!resetToken,
+    };
   }
 }

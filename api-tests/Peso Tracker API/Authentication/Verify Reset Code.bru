@@ -1,0 +1,32 @@
+meta {
+  name: Verify Reset Code
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/auth/verify-reset-code
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@example.com",
+    "code": "123456"
+  }
+}
+
+tests {
+  test("should handle code verification", function() {
+    if (res.status === 400) {
+      expect(res.body.message).to.include('Código inválido');
+    } else if (res.status === 200) {
+      expect(res.body).to.have.property('valid');
+      expect(res.body.valid).to.be.a('boolean');
+      if (res.body.valid) {
+        expect(res.body).to.have.property('tempToken');
+      }
+    }
+  });
+}
