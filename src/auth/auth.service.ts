@@ -12,7 +12,6 @@ import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
-import { ResetPasswordWithCodeDto } from './dto/reset-password-with-code.dto';
 import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -223,7 +222,7 @@ export class AuthService {
     }
 
     // Find valid reset code
-    const resetToken = await this.prisma.passwordResetToken.findFirst({
+    const resetTokenRecord = await this.prisma.passwordResetToken.findFirst({
       where: {
         userId: user.id,
         code,
@@ -233,7 +232,7 @@ export class AuthService {
       },
     });
 
-    if (!resetToken) {
+    if (!resetTokenRecord) {
       // Increment attempts for existing codes
       await this.prisma.passwordResetToken.updateMany({
         where: {
@@ -250,89 +249,49 @@ export class AuthService {
       throw new BadRequestException('Código inválido o expirado');
     }
 
-    // Generate temporary token for password reset
-    const tempToken = crypto.randomBytes(32).toString('hex');
+    // Generate JWT token valid for 5 minutes for password reset
+    const resetToken = this.jwtService.sign(
+      { 
+        userId: user.id, 
+        purpose: 'password-reset',
+        codeId: resetTokenRecord.id 
+      },
+      { expiresIn: '5m' }
+    );
     
     return {
       valid: true,
-      tempToken, // This will be used for the final password reset
+      resetToken, // JWT token to use in reset-password endpoint
     };
   }
 
-  async resetPasswordWithCode(resetWithCodeDto: ResetPasswordWithCodeDto) {
-    const { email, code, newPassword } = resetWithCodeDto;
-
-    // Find user by email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      throw new BadRequestException('Email inválido');
-    }
-
-    // Find valid reset code
-    const resetToken = await this.prisma.passwordResetToken.findFirst({
-      where: {
-        userId: user.id,
-        code,
-        used: false,
-        expiresAt: { gte: new Date() },
-        attempts: { lt: 3 },
-      },
-    });
-
-    if (!resetToken) {
-      throw new BadRequestException('Código inválido o expirado');
-    }
-
-    try {
-      // Hash new password
-      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-      // Update user password and mark code as used
-      await this.prisma.$transaction([
-        this.prisma.user.update({
-          where: { id: user.id },
-          data: { password: hashedPassword },
-        }),
-        this.prisma.passwordResetToken.update({
-          where: { id: resetToken.id },
-          data: { used: true },
-        }),
-      ]);
-
-      return {
-        message: 'Contraseña restablecida exitosamente.',
-      };
-    } catch (error) {
-      throw new BadRequestException('Error al restablecer la contraseña');
-    }
-  }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
 
-    // Find valid reset code (keeping old method for backward compatibility)
-    const resetToken = await this.prisma.passwordResetToken.findFirst({
-      where: {
-        code: token, // Now looking for code instead of token
-        used: false,
-        expiresAt: { gte: new Date() },
-        attempts: { lt: 3 },
-      },
-      include: { user: true },
-    });
-
-    if (!resetToken) {
-      throw new BadRequestException(
-        'Código de restablecimiento inválido o expirado',
-      );
-    }
-
     try {
+      // Verify JWT token
+      const payload = this.jwtService.verify(token);
+      
+      // Validate token purpose and structure
+      if (payload.purpose !== 'password-reset' || !payload.userId || !payload.codeId) {
+        throw new BadRequestException('Token de restablecimiento inválido');
+      }
+
+      // Verify the original code is still valid and unused
+      const resetTokenRecord = await this.prisma.passwordResetToken.findFirst({
+        where: {
+          id: payload.codeId,
+          userId: payload.userId,
+          used: false,
+          expiresAt: { gte: new Date() },
+        },
+      });
+
+      if (!resetTokenRecord) {
+        throw new BadRequestException('Token de restablecimiento inválido o expirado');
+      }
+
       // Hash new password
       const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
@@ -340,11 +299,11 @@ export class AuthService {
       // Update user password and mark code as used
       await this.prisma.$transaction([
         this.prisma.user.update({
-          where: { id: resetToken.userId },
+          where: { id: payload.userId },
           data: { password: hashedPassword },
         }),
         this.prisma.passwordResetToken.update({
-          where: { id: resetToken.id },
+          where: { id: resetTokenRecord.id },
           data: { used: true },
         }),
       ]);
@@ -353,6 +312,9 @@ export class AuthService {
         message: 'Contraseña restablecida exitosamente.',
       };
     } catch (error) {
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        throw new BadRequestException('Token de restablecimiento inválido o expirado');
+      }
       throw new BadRequestException('Error al restablecer la contraseña');
     }
   }

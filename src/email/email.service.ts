@@ -24,47 +24,6 @@ export class EmailService {
     this.frontendUrl = this.configService.get<string>('cors.origin') || 'http://localhost:3000';
   }
 
-  async sendPasswordResetEmail(
-    email: string,
-    username: string,
-    resetToken: string,
-  ): Promise<void> {
-    try {
-      // Construct reset URL
-      const resetUrl = `${this.frontendUrl}/reset-password?token=${resetToken}`;
-
-      // Load HTML template
-      const templatePath = join(__dirname, 'templates', 'reset-password.html');
-      let htmlTemplate = readFileSync(templatePath, 'utf-8');
-
-      // Replace placeholders
-      htmlTemplate = htmlTemplate
-        .replace(/{{username}}/g, username)
-        .replace(/{{resetUrl}}/g, resetUrl);
-
-      // Send email
-      const { data, error } = await this.resend.emails.send({
-        from: `${this.fromName} <${this.fromEmail}>`,
-        to: [email],
-        subject: '🔐 Restablecer tu contraseña - Peso Tracker',
-        html: htmlTemplate,
-        text: this.generatePlainTextVersion(username, resetUrl),
-      });
-
-      if (error) {
-        this.logger.error('Failed to send password reset email', error);
-        throw new Error('Failed to send password reset email');
-      }
-
-      this.logger.log(`Password reset email sent successfully to ${email}`, {
-        emailId: data?.id,
-        recipient: email,
-      });
-    } catch (error) {
-      this.logger.error('Error sending password reset email', error);
-      throw new Error('Failed to send password reset email');
-    }
-  }
 
   async sendPasswordResetCode(
     email: string,
@@ -106,29 +65,6 @@ export class EmailService {
     }
   }
 
-  private generatePlainTextVersion(username: string, resetUrl: string): string {
-    return `
-¡Hola ${username}!
-
-Has solicitado restablecer tu contraseña en Peso Tracker.
-
-Para crear una nueva contraseña, visita este enlace:
-${resetUrl}
-
-IMPORTANTE:
-- Este enlace expirará en 30 minutos por tu seguridad
-- Este enlace solo funciona una vez
-- Si no solicitaste este cambio, puedes ignorar este email
-
-Por tu seguridad, nunca compartas este enlace con nadie.
-
----
-Peso Tracker Team
-Tu aplicación de seguimiento de peso personal
-
-Este es un email automático, por favor no respondas a este mensaje.
-    `.trim();
-  }
 
   private generatePlainTextCodeVersion(username: string, resetCode: string): string {
     return `

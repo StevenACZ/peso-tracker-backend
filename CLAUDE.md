@@ -78,6 +78,67 @@ SSL conditional (not required for internal PostgreSQL)
 
 **Result:** Ultra-fast responses with complete infrastructure control 🚀
 
+## 📧 Email System (Resend + Templates)
+
+### ✅ Password Recovery Implementation
+- **Service:** Resend API para delivery profesional de emails
+- **Templates:** HTML template con brand colors (#34c956)  
+- **Security:** 6-digit codes, 15min expiration, 3 max attempts
+- **JWT Flow:** verify-reset-code → 5min JWT token → reset-password
+- **Responsive:** Template optimizado para mobile y desktop
+
+### Email Service Configuration
+```typescript
+// EmailService setup
+constructor(private readonly resend: Resend) {}
+
+async sendPasswordResetCode(email: string, username: string, code: string) {
+  await this.resend.emails.send({
+    from: `${FROM_NAME} <${FROM_EMAIL}>`,
+    to: email,
+    subject: 'Código de Recuperación - Peso Tracker',
+    html: this.generatePasswordResetTemplate(username, code)
+  });
+}
+```
+
+### Template Features
+- **Brand Colors:** Peso Tracker green (#34c956) gradients
+- **Responsive:** Mobile-first design with media queries
+- **Security Warnings:** Clear instructions and security notices  
+- **Professional:** Clean typography and modern styling
+- **Location:** `src/email/templates/reset-password-code.html`
+
+### Environment Variables Required
+```bash
+RESEND_API_KEY=re_your_api_key_from_resend_com
+FROM_EMAIL=noreply@yourdomain.com  # Verify domain in Resend
+FROM_NAME=Peso Tracker
+```
+
+### Security Implementation
+```typescript
+// Password reset flow
+async forgotPassword(email) {
+  // 1. Invalidate existing codes
+  // 2. Generate 6-digit code  
+  // 3. Save with 15min expiration
+  // 4. Send email (always success response)
+}
+
+async verifyResetCode(email, code) {
+  // 1. Find valid code (not used, not expired, <3 attempts)
+  // 2. Generate 5min JWT token for reset
+  // 3. Return token for final step
+}
+
+async resetPassword(token, newPassword) {
+  // 1. Verify JWT token
+  // 2. Mark original code as used
+  // 3. Update user password
+}
+```
+
 ## Endpoint Implementation Templates
 
 ### Standard Controller Pattern
@@ -202,11 +263,20 @@ model Goal {
   targetWeight Decimal  @db.Decimal(5, 2)
   targetDate   DateTime @db.Date
 }
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  code      String   @unique  // 6-digit code
+  expiresAt DateTime             // 15 minutes expiration
+  attempts  Int      @default(0) // Max 3 attempts
+  used      Boolean  @default(false)
+}
 ```
 
 ## Endpoint Quick Reference
 
-**Auth (Public):** `POST /auth/{register,login}`
+**Auth (Public):** `POST /auth/{register,login,check-availability,forgot-password,verify-reset-code,reset-password}`
 **Health (Public):** `GET /health/{,database,storage}`
 **Weights (Protected):** `POST,GET,PATCH,DELETE /weights` + `/weights/{chart-data,paginated,progress,:id,:id/photo}`
 **Photos (Public):** `GET /photos/secure/:token` (JWT-signed URLs, 1h expiration)

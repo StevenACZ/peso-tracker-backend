@@ -25,7 +25,8 @@ tests {
       expect(res.body).to.have.property('valid');
       expect(res.body.valid).to.be.a('boolean');
       if (res.body.valid) {
-        expect(res.body).to.have.property('tempToken');
+        expect(res.body).to.have.property('resetToken');
+        expect(res.body.resetToken).to.be.a('string');
       }
     }
   });

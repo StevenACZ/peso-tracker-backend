@@ -35,13 +35,17 @@ services:
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/peso_tracker
       UPLOADS_PATH: /app/uploads
       BASE_URL: https://tu-dominio.com
-      JWT_SECRET: 1407af83110f662da0a79b671a262e32219cfae6aed74a0fc853809d1c2cc289
+      JWT_SECRET: your-ultra-secure-jwt-secret-32-chars-min
       JWT_EXPIRES_IN: 24h
       BCRYPT_SALT_ROUNDS: 12
       RATE_LIMIT_TTL: 60
       RATE_LIMIT_LIMIT: 100
       FRONTEND_URL: https://tu-dominio.com
       RESET_DATABASE: false
+      # Email Service (Resend)
+      RESEND_API_KEY: your-resend-api-key-here
+      FROM_EMAIL: noreply@tu-dominio.com
+      FROM_NAME: Peso Tracker
     volumes:
       - uploads_data:/app/uploads
     ports:

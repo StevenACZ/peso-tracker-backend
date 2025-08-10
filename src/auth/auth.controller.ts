@@ -6,7 +6,6 @@ import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
-import { ResetPasswordWithCodeDto } from './dto/reset-password-with-code.dto';
 import { ApiBody, ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
@@ -183,15 +182,15 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Restablecer contraseña',
-    description: 'Cambia la contraseña usando un token válido de restablecimiento.',
+    description: 'Cambia la contraseña usando un token JWT obtenido de verify-reset-code (válido por 5 minutos).',
   })
   @ApiBody({
     type: ResetPasswordDto,
     examples: {
-      'Reset con token': {
-        summary: 'Restablecer contraseña con token',
+      'Reset con JWT token': {
+        summary: 'Restablecer contraseña con token JWT obtenido de verify-reset-code',
         value: {
-          token: 'abc123def456',
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
           newPassword: 'newSecurePassword123',
         },
       },
@@ -206,7 +205,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Token inválido, expirado o datos incorrectos.' })
+  @ApiResponse({ status: 400, description: 'Token JWT inválido, expirado o datos incorrectos.' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
@@ -235,7 +234,7 @@ export class AuthController {
     schema: {
       example: {
         valid: true,
-        tempToken: 'abc123def456...',
+        resetToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
       },
     },
   })
@@ -244,36 +243,4 @@ export class AuthController {
     return this.authService.verifyResetCode(verifyCodeDto);
   }
 
-  @Post('reset-password-with-code')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Restablecer contraseña con código',
-    description: 'Cambia la contraseña usando un código de 6 dígitos válido.',
-  })
-  @ApiBody({
-    type: ResetPasswordWithCodeDto,
-    examples: {
-      'Reset con código': {
-        summary: 'Restablecer contraseña con código de 6 dígitos',
-        value: {
-          email: 'user@example.com',
-          code: '892934',
-          newPassword: 'newSecurePassword123',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Contraseña restablecida exitosamente.',
-    schema: {
-      example: {
-        message: 'Contraseña restablecida exitosamente.',
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'Código inválido, expirado o datos incorrectos.' })
-  async resetPasswordWithCode(@Body() resetWithCodeDto: ResetPasswordWithCodeDto) {
-    return this.authService.resetPasswordWithCode(resetWithCodeDto);
-  }
 }

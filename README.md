@@ -155,6 +155,10 @@ npm run dev:stop           # Al final del día
 | **AUTENTICACIÓN**           |        |                                           |      |            |
 | `/auth/register`            | POST   | Registrar nuevo usuario                   | ❌   | ✅         |
 | `/auth/login`               | POST   | Iniciar sesión                            | ❌   | ✅         |
+| `/auth/check-availability`  | POST   | Verificar disponibilidad email/username   | ❌   | ✅         |
+| `/auth/forgot-password`     | POST   | Solicitar código de recuperación          | ❌   | ✅         |
+| `/auth/verify-reset-code`   | POST   | Verificar código de 6 dígitos            | ❌   | ✅         |
+| `/auth/reset-password`      | POST   | Restablecer contraseña con JWT token     | ❌   | ✅         |
 | **HEALTH CHECKS**           |        |                                           |      |            |
 | `/health`                   | GET    | Estado general de la aplicación           | ❌   | -          |
 | `/health/database`          | GET    | Estado de conexión a base de datos        | ❌   | -          |
@@ -261,6 +265,142 @@ curl -X POST http://localhost:3000/auth/login \
 - **401** - Credenciales incorrectas
 
 > 📝 **Nota:** Guarda el token JWT para usarlo en requests autenticados. El token expira en 24 horas por defecto.
+
+---
+
+### 🔍 POST `/auth/check-availability` - Verificar Disponibilidad
+
+**Descripción:** Verifica si un email y/o username están disponibles para registro antes de crear la cuenta.
+
+**Request:**
+```bash
+curl -X POST http://localhost:3000/auth/check-availability \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "nuevo@example.com",
+    "username": "nuevousuario"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "email": {
+    "available": true,
+    "checked": true
+  },
+  "username": {
+    "available": false,
+    "checked": true
+  }
+}
+```
+
+---
+
+## 🔄 Recuperación de Contraseña
+
+El sistema implementa un flujo de recuperación seguro con códigos de 6 dígitos enviados por email y tokens JWT temporales.
+
+### 📧 POST `/auth/forgot-password` - Solicitar Código
+
+**Descripción:** Envía un código de 6 dígitos al email del usuario para iniciar el proceso de recuperación.
+
+**Validaciones:**
+- `email`: Formato de email válido
+
+**Request:**
+```bash
+curl -X POST http://localhost:3000/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "message": "Si el email existe, recibirás un código de restablecimiento."
+}
+```
+
+**🔒 Características de Seguridad:**
+- Siempre retorna éxito (no revela si el email existe)
+- Códigos expiran en 15 minutos
+- Máximo 3 intentos por código
+- Invalida códigos previos al generar uno nuevo
+
+---
+
+### ✅ POST `/auth/verify-reset-code` - Verificar Código
+
+**Descripción:** Verifica el código de 6 dígitos y devuelve un token JWT temporal válido por 5 minutos.
+
+**Request:**
+```bash
+curl -X POST http://localhost:3000/auth/verify-reset-code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "code": "123456"
+  }'
+```
+
+**Response Exitoso (200):**
+```json
+{
+  "valid": true,
+  "resetToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Errores Posibles:**
+- **400** - Código inválido, expirado o máximo de intentos alcanzado
+
+---
+
+### 🔑 POST `/auth/reset-password` - Restablecer Contraseña
+
+**Descripción:** Cambia la contraseña usando el token JWT obtenido de verify-reset-code.
+
+**Validaciones:**
+- `token`: JWT token de reset (válido 5 minutos)
+- `newPassword`: Mínimo 6 caracteres, máximo 100
+
+**Request:**
+```bash
+curl -X POST http://localhost:3000/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "newPassword": "nuevaContraseñaSegura123"
+  }'
+```
+
+**Response Exitoso (200):**
+```json
+{
+  "message": "Contraseña restablecida exitosamente."
+}
+```
+
+**🔄 Flujo Completo de Recuperación:**
+```bash
+# 1. Solicitar código
+curl -X POST http://localhost:3000/auth/forgot-password \
+  -d '{"email": "user@example.com"}'
+
+# 2. Usuario recibe email con código (ej: 892145)
+
+# 3. Verificar código y obtener token
+curl -X POST http://localhost:3000/auth/verify-reset-code \
+  -d '{"email": "user@example.com", "code": "892145"}'
+
+# 4. Usar token para cambiar contraseña  
+curl -X POST http://localhost:3000/auth/reset-password \
+  -d '{"token": "JWT_TOKEN_HERE", "newPassword": "nuevaPassword123"}'
+```
 
 ---
 
@@ -1169,6 +1309,11 @@ FRONTEND_URL=http://localhost:3000
 # Rate Limiting
 RATE_LIMIT_TTL=300
 RATE_LIMIT_LIMIT=1000
+
+# Email Service (Resend)
+RESEND_API_KEY=re_your_api_key_here
+FROM_EMAIL=noreply@yourdomain.com
+FROM_NAME=Peso Tracker
 ```
 
 ## 📊 Database Schema
@@ -1205,6 +1350,16 @@ RATE_LIMIT_LIMIT=1000
 - `userId`: Foreign key to Users
 - `targetWeight`: Target weight
 - `targetDate`: Target date
+- `createdAt`, `updatedAt`: Timestamps
+
+### PasswordResetTokens
+
+- `id`: Primary key
+- `userId`: Foreign key to Users
+- `code`: 6-digit reset code (unique)
+- `expiresAt`: Code expiration timestamp
+- `attempts`: Number of verification attempts (max 3)
+- `used`: Boolean flag if code was used
 - `createdAt`, `updatedAt`: Timestamps
 
 ## 🔧 Key Features
