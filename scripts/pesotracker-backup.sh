@@ -6,8 +6,29 @@
 BACKUP_BASE="/mnt/backup/pesotracker"
 RESTORE_DIR="/mnt/backup/restore"
 PROJECT_DIR="$(pwd)"
-CONTAINER_DB="api-pesotracker-db"
-CONTAINER_API="api-pesotracker"
+
+# Detectar entorno automáticamente
+detect_environment() {
+    if docker ps --format "{{.Names}}" | grep -q "postgres\|db"; then
+        # Entorno DEV: PostgreSQL en Docker
+        CONTAINER_DB=$(docker ps --format "{{.Names}}" | grep -E "(postgres|db)" | head -1)
+        CONTAINER_API=$(docker ps --format "{{.Names}}" | grep -v -E "(postgres|db|portainer|watchtower)" | head -1)
+        USE_DOCKER_DB=true
+        log "🏠 Entorno DEV detectado (PostgreSQL en Docker)"
+    else
+        # Entorno VPS: PostgreSQL local
+        CONTAINER_API=$(docker ps --format "{{.Names}}" | grep -v -E "(portainer|watchtower)" | head -1)
+        USE_DOCKER_DB=false
+        log "🏢 Entorno VPS detectado (PostgreSQL local)"
+    fi
+    
+    log "📦 Contenedor API: $CONTAINER_API"
+    if [ "$USE_DOCKER_DB" = true ]; then
+        log "🗄️  Contenedor DB: $CONTAINER_DB"
+    else
+        log "🗄️  Base de datos: PostgreSQL local"
+    fi
+}
 
 # Colores para output
 GREEN='\033[0;32m'
@@ -41,6 +62,9 @@ check_docker() {
 do_backup() {
     log "🚀 Iniciando backup automático..."
     
+    # Detectar entorno
+    detect_environment
+    
     # Crear carpetas
     BACKUP_DATE=$(date +"%Y-%m-%d_%H-%M-%S")
     BACKUP_DIR="$BACKUP_BASE/$BACKUP_DATE"
@@ -48,13 +72,24 @@ do_backup() {
     
     log "📁 Carpeta: $BACKUP_DIR"
     
-    # 1. Backup DB
+    # 1. Backup DB (según entorno)
     log "💾 Exportando base de datos..."
-    if docker exec "$CONTAINER_DB" pg_dump -U postgres peso_tracker > "$BACKUP_DIR/peso_tracker.sql"; then
-        log "✅ Base de datos exportada"
+    if [ "$USE_DOCKER_DB" = true ]; then
+        # DEV: PostgreSQL en Docker
+        if docker exec "$CONTAINER_DB" pg_dump -U postgres peso_tracker > "$BACKUP_DIR/peso_tracker.sql" 2>/dev/null; then
+            log "✅ Base de datos exportada (Docker)"
+        else
+            error "❌ Error al exportar base de datos desde Docker"
+            return 1
+        fi
     else
-        error "❌ Error al exportar base de datos"
-        return 1
+        # VPS: PostgreSQL local
+        if pg_dump -h localhost -U postgres -d peso_tracker > "$BACKUP_DIR/peso_tracker.sql" 2>/dev/null; then
+            log "✅ Base de datos exportada (Local)"
+        else
+            error "❌ Error al exportar base de datos local"
+            return 1
+        fi
     fi
     
     # 2. Backup uploads
@@ -94,6 +129,9 @@ EOF
 do_restore() {
     log "🔄 Iniciando restore automático..."
     
+    # Detectar entorno
+    detect_environment
+    
     # Verificar carpeta restore
     if [ ! -d "$RESTORE_DIR" ] || [ -z "$(ls -A "$RESTORE_DIR" 2>/dev/null)" ]; then
         error "❌ Carpeta $RESTORE_DIR vacía o no existe"
@@ -120,36 +158,61 @@ do_restore() {
     
     # 1. Parar aplicación
     log "🛑 Parando aplicación..."
-    docker-compose down >/dev/null 2>&1
-    
-    # 2. Iniciar solo PostgreSQL
-    log "🚀 Iniciando PostgreSQL..."
-    docker-compose up -d postgres >/dev/null 2>&1
-    sleep 5
-    
-    # Esperar a que PostgreSQL esté listo
-    log "⏳ Esperando PostgreSQL..."
-    for i in {1..30}; do
-        if docker exec "$CONTAINER_DB" pg_isready -U postgres >/dev/null 2>&1; then
-            break
-        fi
-        sleep 1
-        if [ $i -eq 30 ]; then
-            error "❌ PostgreSQL no responde"
+    if [ "$USE_DOCKER_DB" = true ]; then
+        # DEV: Parar todo el docker-compose
+        docker-compose down >/dev/null 2>&1
+        log "🚀 Iniciando solo PostgreSQL..."
+        docker-compose up -d postgres >/dev/null 2>&1
+        sleep 5
+        
+        # Esperar PostgreSQL en Docker
+        log "⏳ Esperando PostgreSQL (Docker)..."
+        for i in {1..30}; do
+            if docker exec "$CONTAINER_DB" pg_isready -U postgres >/dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+            if [ $i -eq 30 ]; then
+                error "❌ PostgreSQL Docker no responde"
+                return 1
+            fi
+        done
+    else
+        # VPS: Solo parar API
+        docker stop "$CONTAINER_API" >/dev/null 2>&1
+        
+        # Verificar PostgreSQL local
+        log "🚀 Verificando PostgreSQL local..."
+        if ! pg_isready -h localhost -U postgres >/dev/null 2>&1; then
+            error "❌ PostgreSQL local no responde"
             return 1
         fi
-    done
+    fi
     
-    # 3. Restaurar DB
+    # 2. Restaurar DB (según entorno)
     log "💾 Restaurando base de datos..."
-    docker exec "$CONTAINER_DB" psql -U postgres -c "DROP DATABASE IF EXISTS peso_tracker;" >/dev/null 2>&1
-    docker exec "$CONTAINER_DB" psql -U postgres -c "CREATE DATABASE peso_tracker;" >/dev/null 2>&1
-    
-    if docker exec -i "$CONTAINER_DB" psql -U postgres peso_tracker < "$RESTORE_DIR/peso_tracker.sql" >/dev/null 2>&1; then
-        log "✅ Base de datos restaurada"
+    if [ "$USE_DOCKER_DB" = true ]; then
+        # DEV: PostgreSQL en Docker
+        docker exec "$CONTAINER_DB" psql -U postgres -c "DROP DATABASE IF EXISTS peso_tracker;" >/dev/null 2>&1
+        docker exec "$CONTAINER_DB" psql -U postgres -c "CREATE DATABASE peso_tracker;" >/dev/null 2>&1
+        
+        if docker exec -i "$CONTAINER_DB" psql -U postgres peso_tracker < "$RESTORE_DIR/peso_tracker.sql" >/dev/null 2>&1; then
+            log "✅ Base de datos restaurada (Docker)"
+        else
+            error "❌ Error al restaurar base de datos Docker"
+            return 1
+        fi
     else
-        error "❌ Error al restaurar base de datos"
-        return 1
+        # VPS: PostgreSQL local
+        dropdb -h localhost -U postgres peso_tracker 2>/dev/null || true
+        createdb -h localhost -U postgres peso_tracker >/dev/null 2>&1
+        
+        if psql -h localhost -U postgres -d peso_tracker < "$RESTORE_DIR/peso_tracker.sql" >/dev/null 2>&1; then
+            log "✅ Base de datos restaurada (Local)"
+        else
+            error "❌ Error al restaurar base de datos local"
+            return 1
+        fi
     fi
     
     # 4. Restaurar uploads
@@ -164,9 +227,15 @@ do_restore() {
         log "ℹ️  No hay imágenes que restaurar"
     fi
     
-    # 5. Reiniciar aplicación completa
+    # 5. Reiniciar aplicación (según entorno)
     log "🚀 Reiniciando aplicación..."
-    docker-compose up -d >/dev/null 2>&1
+    if [ "$USE_DOCKER_DB" = true ]; then
+        # DEV: Reiniciar todo el docker-compose
+        docker-compose up -d >/dev/null 2>&1
+    else
+        # VPS: Solo reiniciar API
+        docker start "$CONTAINER_API" >/dev/null 2>&1
+    fi
     
     # 6. Limpiar carpeta restore
     log "🧹 Limpiando carpeta restore..."
