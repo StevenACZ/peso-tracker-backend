@@ -2,6 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { ApiBody, ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
@@ -90,5 +91,56 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Credenciales incorrectas.' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('check-availability')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verificar disponibilidad de username y email',
+    description: 'Verifica si un username y/o email están disponibles para registro.',
+  })
+  @ApiBody({
+    type: CheckAvailabilityDto,
+    examples: {
+      'Verificar ambos': {
+        summary: 'Verificar username y email',
+        value: {
+          username: 'newuser',
+          email: 'new@example.com',
+        },
+      },
+      'Solo username': {
+        summary: 'Verificar solo username',
+        value: {
+          username: 'newuser',
+        },
+      },
+      'Solo email': {
+        summary: 'Verificar solo email',
+        value: {
+          email: 'new@example.com',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disponibilidad verificada exitosamente.',
+    schema: {
+      example: {
+        email: {
+          available: true,
+          checked: true,
+        },
+        username: {
+          available: false,
+          checked: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Debe proporcionar al menos username o email.' })
+  async checkAvailability(@Body() checkDto: CheckAvailabilityDto) {
+    return this.authService.checkAvailability(checkDto);
   }
 }

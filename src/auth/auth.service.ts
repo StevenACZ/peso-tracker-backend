@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -115,5 +116,35 @@ export class AuthService {
       },
       token,
     };
+  }
+
+  async checkAvailability(checkDto: CheckAvailabilityDto) {
+    const { username, email } = checkDto;
+    
+    if (!username && !email) {
+      throw new BadRequestException('Debe proporcionar al menos username o email');
+    }
+
+    const conditions: Array<{ email?: string; username?: string }> = [];
+    if (email) conditions.push({ email });
+    if (username) conditions.push({ username });
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: { OR: conditions },
+      select: { email: true, username: true },
+    });
+
+    const result = {
+      email: {
+        available: email ? !existingUser || existingUser.email !== email : undefined,
+        checked: !!email,
+      },
+      username: {
+        available: username ? !existingUser || existingUser.username !== username : undefined,
+        checked: !!username,
+      },
+    };
+
+    return result;
   }
 }

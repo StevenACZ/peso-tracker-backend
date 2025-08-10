@@ -1,0 +1,30 @@
+meta {
+  name: Check Availability
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/auth/check-availability
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "newuser123",
+    "email": "newuser@example.com"
+  }
+}
+
+tests {
+  test("should return availability status", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.have.property('email');
+    expect(res.body).to.have.property('username');
+    expect(res.body.email).to.have.property('available');
+    expect(res.body.email).to.have.property('checked');
+    expect(res.body.username).to.have.property('available');
+    expect(res.body.username).to.have.property('checked');
+  });
+}
