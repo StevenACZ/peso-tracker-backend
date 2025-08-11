@@ -108,11 +108,11 @@ export class ImageProcessingService {
     size: { width: number; height: number },
     format: 'heif' | 'webp' | 'jpeg',
   ): Promise<Buffer> {
+    // Use different resize strategies for different sizes
+    const resizeOptions = this.getResizeStrategy(size.width);
+    
     const sharpInstance = sharp(buffer)
-      .resize(size.width, size.height, {
-        fit: 'cover',
-        position: 'center',
-      });
+      .resize(size.width, size.height, resizeOptions);
 
     switch (format) {
       case 'heif':
@@ -141,6 +141,21 @@ export class ImageProcessingService {
           })
           .toBuffer();
     }
+  }
+
+  private getResizeStrategy(width: number): { fit: 'cover' | 'inside'; position?: string } {
+    // Thumbnail: Keep square for consistent UI grid
+    if (width <= 300) {
+      return {
+        fit: 'cover',
+        position: 'center',
+      };
+    }
+    
+    // Medium & Full: Preserve original proportions for progress photos
+    return {
+      fit: 'inside', // Preserves aspect ratio, fits within dimensions
+    };
   }
 
   private getQualityForSize(width: number): number {

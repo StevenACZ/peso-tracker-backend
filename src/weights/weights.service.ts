@@ -102,7 +102,9 @@ export class WeightsService {
     endDate?: string,
     cloudflareHeaders?: Record<string, string>,
   ) {
-    const skip = (page - 1) * limit;
+    // Enforce maximum limit of 5 to protect app design
+    const safeLimit = Math.min(limit, 5);
+    const skip = (page - 1) * safeLimit;
 
     const where: { userId: number; date?: { gte?: Date; lte?: Date } } = {
       userId,
@@ -118,7 +120,7 @@ export class WeightsService {
       this.prisma.weight.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         orderBy: { date: 'desc' },
         include: {
           photos: true,
@@ -177,10 +179,10 @@ export class WeightsService {
       data: formattedWeights,
       pagination: {
         page,
-        limit,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page < Math.ceil(total / limit),
+        totalPages: Math.ceil(total / safeLimit),
+        hasNext: page < Math.ceil(total / safeLimit),
         hasPrev: page > 1,
       },
       metadata: {
@@ -604,13 +606,15 @@ export class WeightsService {
   }
 
   async getPaginatedData(userId: number, page: number = 1, limit: number = 5) {
-    const skip = (page - 1) * limit;
+    // Enforce maximum limit of 5 to protect app design
+    const safeLimit = Math.min(limit, 5);
+    const skip = (page - 1) * safeLimit;
 
     const [weights, total] = await Promise.all([
       this.prisma.weight.findMany({
         where: { userId },
         skip,
-        take: limit,
+        take: safeLimit,
         orderBy: { date: 'desc' },
         select: {
           id: true,
@@ -639,9 +643,9 @@ export class WeightsService {
       data: formattedWeights,
       pagination: {
         page,
-        limit,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }
