@@ -97,9 +97,10 @@ export class WeightsService {
   async findAll(
     userId: number,
     page: number = 1,
-    limit: number = 10,
+    limit: number = 5, // Mobile-first: smaller chunks for better performance
     startDate?: string,
     endDate?: string,
+    cloudflareHeaders?: Record<string, string>,
   ) {
     const skip = (page - 1) * limit;
 
@@ -137,22 +138,28 @@ export class WeightsService {
           fullUrl: string;
           createdAt: Date;
           updatedAt: Date;
+          expiresIn?: number;
+          format?: string;
         } | null = null;
+        
         if (weight.photos) {
-          const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+          const signedUrlsResult = await this.storageService.getSignedUrlsForPhoto({
             thumbnailUrl: weight.photos.thumbnailUrl,
             mediumUrl: weight.photos.mediumUrl,
             fullUrl: weight.photos.fullUrl,
-          }, userId);
+          }, userId, cloudflareHeaders);
+          
           photo = {
             id: weight.photos.id,
             userId: weight.photos.userId,
             weightId: weight.photos.weightId,
-            thumbnailUrl: signedUrls.thumbnailUrl,
-            mediumUrl: signedUrls.mediumUrl,
-            fullUrl: signedUrls.fullUrl,
+            thumbnailUrl: signedUrlsResult.thumbnailUrl,
+            mediumUrl: signedUrlsResult.mediumUrl,
+            fullUrl: signedUrlsResult.fullUrl,
             createdAt: weight.photos.createdAt,
             updatedAt: weight.photos.updatedAt,
+            expiresIn: signedUrlsResult.expiresIn,
+            format: signedUrlsResult.metadata.format,
           };
         }
         return {
@@ -163,6 +170,9 @@ export class WeightsService {
       }),
     );
 
+    // Apple-optimized pagination metadata
+    const isCloudflare = !!(cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']);
+    
     return {
       data: formattedWeights,
       pagination: {
@@ -170,6 +180,14 @@ export class WeightsService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+      metadata: {
+        isCloudflare,
+        optimizedForMobile: true,
+        dataCount: formattedWeights.length,
+        photosCount: formattedWeights.filter(w => w.photo).length,
       },
     };
   }
@@ -542,7 +560,7 @@ export class WeightsService {
     }
   }
 
-  async getWeightProgress(userId: number) {
+  async getWeightProgress(userId: number, cloudflareHeaders?: Record<string, string>) {
     const weights = await this.prisma.weight.findMany({
       where: {
         userId,
@@ -558,11 +576,11 @@ export class WeightsService {
 
     return Promise.all(
       weights.map(async (weight) => {
-        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
+        const signedUrlsResult = await this.storageService.getSignedUrlsForPhoto({
           thumbnailUrl: weight.photos!.thumbnailUrl,
           mediumUrl: weight.photos!.mediumUrl,
           fullUrl: weight.photos!.fullUrl,
-        }, userId);
+        }, userId, cloudflareHeaders);
         return {
           id: weight.id,
           weight: Number(weight.weight),
@@ -572,11 +590,13 @@ export class WeightsService {
             id: weight.photos!.id,
             userId: weight.photos!.userId,
             weightId: weight.photos!.weightId,
-            thumbnailUrl: signedUrls.thumbnailUrl,
-            mediumUrl: signedUrls.mediumUrl,
-            fullUrl: signedUrls.fullUrl,
+            thumbnailUrl: signedUrlsResult.thumbnailUrl,
+            mediumUrl: signedUrlsResult.mediumUrl,
+            fullUrl: signedUrlsResult.fullUrl,
             createdAt: weight.photos!.createdAt,
             updatedAt: weight.photos!.updatedAt,
+            expiresIn: signedUrlsResult.expiresIn,
+            format: signedUrlsResult.metadata.format,
           },
         };
       }),

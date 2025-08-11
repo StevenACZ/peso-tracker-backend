@@ -37,8 +37,23 @@ export class AuthService {
     return user;
   }
 
-  generateToken(payload: { userId: number }): string {
-    return this.jwtService.sign(payload);
+  generateToken(payload: { userId: number }, options?: { expiresIn?: string; type?: 'access' | 'refresh' }): string {
+    const defaultExpiry = options?.type === 'refresh' ? '7d' : '15m'; // Short access tokens for mobile security
+    return this.jwtService.sign(payload, { 
+      expiresIn: options?.expiresIn || defaultExpiry,
+      algorithm: 'HS256' 
+    });
+  }
+
+  generateTokenPair(payload: { userId: number }): { accessToken: string; refreshToken: string; expiresIn: number } {
+    const accessToken = this.generateToken(payload, { type: 'access' });
+    const refreshToken = this.generateToken(payload, { type: 'refresh' });
+    
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 15 * 60, // 15 minutes in seconds
+    };
   }
 
   async register(registerDto: RegisterDto) {
@@ -80,12 +95,15 @@ export class AuthService {
         },
       });
 
-      // Generate token
-      const token = this.generateToken({ userId: user.id });
+      // Generate token pair for Apple apps (short access + long refresh)
+      const tokens = this.generateTokenPair({ userId: user.id });
 
       return {
         user,
-        token,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        tokenType: 'Bearer',
       };
     } catch {
       throw new BadRequestException('Error al crear el usuario');
@@ -110,8 +128,8 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Generate token
-    const token = this.generateToken({ userId: user.id });
+    // Generate token pair for Apple apps (short access + long refresh)
+    const tokens = this.generateTokenPair({ userId: user.id });
 
     return {
       user: {
@@ -120,8 +138,50 @@ export class AuthService {
         email: user.email,
         createdAt: user.createdAt,
       },
-      token,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      tokenType: 'Bearer',
     };
+  }
+
+  async refreshToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }> {
+    try {
+      // Verify refresh token
+      const payload = this.jwtService.verify(refreshToken);
+      
+      if (!payload.userId) {
+        throw new UnauthorizedException('Token de refresco inválido');
+      }
+
+      // Verify user still exists and is active
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+
+      // Generate new token pair
+      const tokens = this.generateTokenPair({ userId: user.id });
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken, 
+        expiresIn: tokens.expiresIn,
+      };
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token de refresco inválido o expirado');
+      }
+      throw new UnauthorizedException('Error al refrescar el token');
+    }
   }
 
   async checkAvailability(checkDto: CheckAvailabilityDto) {
