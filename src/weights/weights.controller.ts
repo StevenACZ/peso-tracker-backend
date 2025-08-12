@@ -13,8 +13,10 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request } from 'express';
 import { WeightsService } from './weights.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -98,9 +100,10 @@ export class WeightsController {
   create(
     @CurrentUser() user: { id: number },
     @Body() createWeightDto: CreateWeightDto,
+    @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.weightsService.create(user.id, createWeightDto, file);
+    return this.weightsService.create(user.id, createWeightDto, file, req.headers as Record<string, string>);
   }
 
   @Get('chart-data')
@@ -342,9 +345,10 @@ export class WeightsController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: { id: number },
     @Body() updateWeightDto: UpdateWeightDto,
+    @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.weightsService.update(id, user.id, updateWeightDto, file);
+    return this.weightsService.update(id, user.id, updateWeightDto, file, req.headers as Record<string, string>);
   }
 
   @Delete(':id')

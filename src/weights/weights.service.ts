@@ -21,6 +21,7 @@ export class WeightsService {
     userId: number,
     createWeightDto: CreateWeightDto,
     file?: Express.Multer.File,
+    cloudflareHeaders?: Record<string, string>,
   ) {
     const { weight, date, notes } = createWeightDto;
 
@@ -56,15 +57,26 @@ export class WeightsService {
             },
           });
 
+          // SECURITY: Always return signed URLs for photo access
+          const signedUrls = await this.storageService.getSignedUrlsForPhoto(
+            {
+              thumbnailUrl: photo.thumbnailUrl,
+              mediumUrl: photo.mediumUrl,
+              fullUrl: photo.fullUrl,
+            },
+            userId,
+            cloudflareHeaders,
+          );
+
           return {
             ...weightRecord,
             photo: {
               id: photo.id,
               userId: photo.userId,
               weightId: photo.weightId,
-              thumbnailUrl: photo.thumbnailUrl,
-              mediumUrl: photo.mediumUrl,
-              fullUrl: photo.fullUrl,
+              thumbnailUrl: signedUrls.thumbnailUrl,
+              mediumUrl: signedUrls.mediumUrl,
+              fullUrl: signedUrls.fullUrl,
               createdAt: photo.createdAt,
               updatedAt: photo.updatedAt,
             },
@@ -751,6 +763,7 @@ export class WeightsService {
     userId: number,
     updateWeightDto: UpdateWeightDto,
     file?: Express.Multer.File,
+    cloudflareHeaders?: Record<string, string>,
   ) {
     const existingWeight = await this.findOneRaw(id, userId);
     const { ...weightData } = updateWeightDto;
@@ -802,15 +815,26 @@ export class WeightsService {
             },
           });
 
+          // SECURITY: Always return signed URLs for photo access
+          const signedUrls = await this.storageService.getSignedUrlsForPhoto(
+            {
+              thumbnailUrl: photo.thumbnailUrl,
+              mediumUrl: photo.mediumUrl,
+              fullUrl: photo.fullUrl,
+            },
+            userId,
+            cloudflareHeaders,
+          );
+
           return {
             ...updatedWeight,
             photo: {
               id: photo.id,
               userId: photo.userId,
               weightId: photo.weightId,
-              thumbnailUrl: photo.thumbnailUrl,
-              mediumUrl: photo.mediumUrl,
-              fullUrl: photo.fullUrl,
+              thumbnailUrl: signedUrls.thumbnailUrl,
+              mediumUrl: signedUrls.mediumUrl,
+              fullUrl: signedUrls.fullUrl,
               createdAt: photo.createdAt,
               updatedAt: photo.updatedAt,
             },
@@ -841,6 +865,7 @@ export class WeightsService {
             fullUrl: updatedWeight.photos.fullUrl,
           },
           userId,
+          cloudflareHeaders,
         );
         photo = {
           id: updatedWeight.photos.id,
