@@ -1,13 +1,18 @@
 meta {
-  name: 03 - Get All Weights
+  name: 02 - Get All Weights
   type: http
   seq: 3
 }
 
 get {
-  url: {{baseUrl}}/weights?page=1&limit=5
+  url: {{baseUrl}}/weights/paginated?page=1&limit=5
   body: none
   auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 5
 }
 
 auth:bearer {

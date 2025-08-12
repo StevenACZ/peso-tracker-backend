@@ -1,0 +1,22 @@
+meta {
+  name: 04 - Delete Goal
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/goals/{{lastGoalId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Goal deleted successfully", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.message).to.include("eliminada");
+  });
+}

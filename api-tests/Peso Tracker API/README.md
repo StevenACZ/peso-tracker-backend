@@ -4,7 +4,7 @@
 
 ### 1. **Setup Environment**
 - Select environment: `Development` or `Production`
-- Update `testEmail` and `testPassword` in environment variables
+- Default credentials: `test@example.com` / `Test123!`
 
 ### 2. **Authentication Flow**
 1. Run `Auth/01 - Register` (if first time)
@@ -16,6 +16,7 @@
 Auth Flow:    Register → Login → Refresh Token
 Weight Flow:  Create → Get All → Get by ID → Update → Delete
 Photo Flow:   Create with Photo → Verify signed URLs
+Goals Flow:   Create → Get by ID → Update → Delete
 Analytics:    Chart Data → Progress
 Health:       Health Check
 ```
@@ -29,8 +30,9 @@ Health:       Health Check
 
 ### **📊 Dynamic Variables**
 - `lastWeightId` auto-saved after weight creation
+- `lastGoalId` auto-saved after goal creation
 - Used automatically in update/delete operations
-- Environment-specific test data
+- Hardcoded credentials (no environment variables needed)
 
 ### **🧪 Comprehensive Tests**
 - Status code validation

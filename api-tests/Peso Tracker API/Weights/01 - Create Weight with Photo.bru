@@ -1,5 +1,5 @@
 meta {
-  name: 02 - Create Weight with Photo
+  name: 01 - Create Weight with Photo
   type: http
   seq: 2
 }
@@ -18,7 +18,7 @@ body:multipart-form {
   weight: 73.0
   date: 2025-01-13
   notes: Test weight with photo from Bruno
-  photo: @file(/path/to/test-image.jpg)
+  photo: @file()
 }
 
 script:post-response {
