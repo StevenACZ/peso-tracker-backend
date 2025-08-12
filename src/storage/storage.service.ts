@@ -66,17 +66,33 @@ export class StorageService {
       await fs.mkdir(weightDir, { recursive: true, mode: 0o700 });
 
       // Process image using the new ImageProcessingService
-      const processedResult = await this.imageProcessing.processImage(file, this.maxFileSize);
-      const fileExtension = this.imageProcessing.getFileExtension(processedResult.format);
+      const processedResult = await this.imageProcessing.processImage(
+        file,
+        this.maxFileSize,
+      );
+      const fileExtension = this.imageProcessing.getFileExtension(
+        processedResult.format,
+      );
 
       // Generate file paths
-      const thumbnailPath = path.join(weightDir, `${timestamp}_thumbnail.${fileExtension}`);
-      const mediumPath = path.join(weightDir, `${timestamp}_medium.${fileExtension}`);
-      const fullPath = path.join(weightDir, `${timestamp}_full.${fileExtension}`);
+      const thumbnailPath = path.join(
+        weightDir,
+        `${timestamp}_thumbnail.${fileExtension}`,
+      );
+      const mediumPath = path.join(
+        weightDir,
+        `${timestamp}_medium.${fileExtension}`,
+      );
+      const fullPath = path.join(
+        weightDir,
+        `${timestamp}_full.${fileExtension}`,
+      );
 
       // Save all processed sizes to filesystem
       await Promise.all([
-        fs.writeFile(thumbnailPath, processedResult.thumbnailBuffer, { mode: 0o600 }),
+        fs.writeFile(thumbnailPath, processedResult.thumbnailBuffer, {
+          mode: 0o600,
+        }),
         fs.writeFile(mediumPath, processedResult.mediumBuffer, { mode: 0o600 }),
         fs.writeFile(fullPath, processedResult.fullBuffer, { mode: 0o600 }),
       ]);
@@ -98,7 +114,7 @@ export class StorageService {
       };
 
       this.logger.log(
-        `Image uploaded successfully for user ${userId}, weight ${weightId}. Format: ${processedResult.format}, Savings: ${Math.round((1 - (metadata.processedSizes.full / metadata.originalSize)) * 100)}%`,
+        `Image uploaded successfully for user ${userId}, weight ${weightId}. Format: ${processedResult.format}, Savings: ${Math.round((1 - metadata.processedSizes.full / metadata.originalSize) * 100)}%`,
       );
 
       return {
@@ -192,7 +208,6 @@ export class StorageService {
     }
   }
 
-
   /**
    * Genera una URL segura firmada con JWT optimizada para apps móviles
    * @param photoPath Path relativo de la imagen
@@ -207,12 +222,14 @@ export class StorageService {
     expiresInSeconds?: number,
   ): string {
     // Auto-detect Cloudflare and adjust expiry for Apple apps
-    const isCloudflare = !!(cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']);
+    const isCloudflare = !!(
+      cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']
+    );
     const defaultExpiry = this.isProduction && !isCloudflare ? 900 : 1800; // 15min prod, 30min dev/cloudflare
     const expiry = expiresInSeconds || defaultExpiry;
 
     const cleanPath = photoPath.replace(/^https?:\/\/[^\/]+\//, '');
-    
+
     const payload = {
       path: cleanPath,
       userId: userId,
@@ -226,7 +243,7 @@ export class StorageService {
     if (!secret) {
       throw new BadRequestException('JWT secret not configured');
     }
-    
+
     const token = jwt.sign(payload, secret, { algorithm: 'HS256' });
     return `${this.baseUrl}/photos/secure/${token}`;
   }
@@ -249,17 +266,34 @@ export class StorageService {
       format: string;
     };
   } {
-    const isCloudflare = !!(cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']);
+    const isCloudflare = !!(
+      cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']
+    );
     const expiresIn = this.isProduction && !isCloudflare ? 900 : 1800; // 15min prod, 30min dev/cloudflare
-    
+
     // Extract format from URL for Apple apps optimization
-    const format = photo.fullUrl.includes('.heic') ? 'heic' : 
-                   photo.fullUrl.includes('.webp') ? 'webp' : 'jpeg';
+    const format = photo.fullUrl.includes('.heic')
+      ? 'heic'
+      : photo.fullUrl.includes('.webp')
+        ? 'webp'
+        : 'jpeg';
 
     return {
-      thumbnailUrl: this.generateSecurePhotoUrl(photo.thumbnailUrl, userId, cloudflareHeaders),
-      mediumUrl: this.generateSecurePhotoUrl(photo.mediumUrl, userId, cloudflareHeaders),
-      fullUrl: this.generateSecurePhotoUrl(photo.fullUrl, userId, cloudflareHeaders),
+      thumbnailUrl: this.generateSecurePhotoUrl(
+        photo.thumbnailUrl,
+        userId,
+        cloudflareHeaders,
+      ),
+      mediumUrl: this.generateSecurePhotoUrl(
+        photo.mediumUrl,
+        userId,
+        cloudflareHeaders,
+      ),
+      fullUrl: this.generateSecurePhotoUrl(
+        photo.fullUrl,
+        userId,
+        cloudflareHeaders,
+      ),
       expiresIn,
       metadata: {
         isCloudflare,
@@ -269,16 +303,23 @@ export class StorageService {
   }
 
   // New method for Apple-optimized cache headers
-  getAppleOptimizedHeaders(format: string, isCloudflare: boolean = false): Record<string, string> {
-    const cacheAge = isCloudflare ? 31536000 : (this.isProduction ? 2592000 : 86400); // 1y CF, 1mo prod, 1d dev
-    
+  getAppleOptimizedHeaders(
+    format: string,
+    isCloudflare: boolean = false,
+  ): Record<string, string> {
+    const cacheAge = isCloudflare
+      ? 31536000
+      : this.isProduction
+        ? 2592000
+        : 86400; // 1y CF, 1mo prod, 1d dev
+
     return {
       'Cache-Control': `public, max-age=${cacheAge}, immutable`,
       'Content-Type': this.getMimeTypeFromFormat(format),
       'X-Content-Type-Options': 'nosniff',
       'Accept-Ranges': 'bytes',
       'X-Apple-Optimized': 'true',
-      'Vary': 'Accept-Encoding',
+      Vary: 'Accept-Encoding',
       // Apple-specific performance hints
       'X-iOS-Cache-Friendly': 'true',
       'X-Retina-Optimized': 'true',
@@ -287,11 +328,11 @@ export class StorageService {
 
   private getMimeTypeFromFormat(format: string): string {
     const mimeTypes: Record<string, string> = {
-      'heic': 'image/heic',
-      'heif': 'image/heif', 
-      'webp': 'image/webp',
-      'jpeg': 'image/jpeg',
-      'jpg': 'image/jpeg',
+      heic: 'image/heic',
+      heif: 'image/heif',
+      webp: 'image/webp',
+      jpeg: 'image/jpeg',
+      jpg: 'image/jpeg',
     };
     return mimeTypes[format] || 'image/jpeg';
   }

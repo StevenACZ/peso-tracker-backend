@@ -11,6 +11,10 @@ import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // Trust proxy for Cloudflare Tunnels - enables real IP detection
+  app.set('trust proxy', true);
+  
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
@@ -43,7 +47,8 @@ async function bootstrap() {
   });
 
   // Static file serving for uploads
-  const uploadsPath = configService.get<string>('storage.uploadsPath') || '/app/uploads';
+  const uploadsPath =
+    configService.get<string>('storage.uploadsPath') || '/app/uploads';
   app.useStaticAssets(uploadsPath, {
     prefix: '/uploads/',
     setHeaders: (res) => {

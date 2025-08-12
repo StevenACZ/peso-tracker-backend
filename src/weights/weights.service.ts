@@ -143,14 +143,19 @@ export class WeightsService {
           expiresIn?: number;
           format?: string;
         } | null = null;
-        
+
         if (weight.photos) {
-          const signedUrlsResult = await this.storageService.getSignedUrlsForPhoto({
-            thumbnailUrl: weight.photos.thumbnailUrl,
-            mediumUrl: weight.photos.mediumUrl,
-            fullUrl: weight.photos.fullUrl,
-          }, userId, cloudflareHeaders);
-          
+          const signedUrlsResult =
+            await this.storageService.getSignedUrlsForPhoto(
+              {
+                thumbnailUrl: weight.photos.thumbnailUrl,
+                mediumUrl: weight.photos.mediumUrl,
+                fullUrl: weight.photos.fullUrl,
+              },
+              userId,
+              cloudflareHeaders,
+            );
+
           photo = {
             id: weight.photos.id,
             userId: weight.photos.userId,
@@ -173,8 +178,10 @@ export class WeightsService {
     );
 
     // Apple-optimized pagination metadata
-    const isCloudflare = !!(cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']);
-    
+    const isCloudflare = !!(
+      cloudflareHeaders?.['cf-ray'] || cloudflareHeaders?.['cf-connecting-ip']
+    );
+
     return {
       data: formattedWeights,
       pagination: {
@@ -189,7 +196,7 @@ export class WeightsService {
         isCloudflare,
         optimizedForMobile: true,
         dataCount: formattedWeights.length,
-        photosCount: formattedWeights.filter(w => w.photo).length,
+        photosCount: formattedWeights.filter((w) => w.photo).length,
       },
     };
   }
@@ -562,7 +569,10 @@ export class WeightsService {
     }
   }
 
-  async getWeightProgress(userId: number, cloudflareHeaders?: Record<string, string>) {
+  async getWeightProgress(
+    userId: number,
+    cloudflareHeaders?: Record<string, string>,
+  ) {
     const weights = await this.prisma.weight.findMany({
       where: {
         userId,
@@ -578,11 +588,16 @@ export class WeightsService {
 
     return Promise.all(
       weights.map(async (weight) => {
-        const signedUrlsResult = await this.storageService.getSignedUrlsForPhoto({
-          thumbnailUrl: weight.photos!.thumbnailUrl,
-          mediumUrl: weight.photos!.mediumUrl,
-          fullUrl: weight.photos!.fullUrl,
-        }, userId, cloudflareHeaders);
+        const signedUrlsResult =
+          await this.storageService.getSignedUrlsForPhoto(
+            {
+              thumbnailUrl: weight.photos!.thumbnailUrl,
+              mediumUrl: weight.photos!.mediumUrl,
+              fullUrl: weight.photos!.fullUrl,
+            },
+            userId,
+            cloudflareHeaders,
+          );
         return {
           id: weight.id,
           weight: Number(weight.weight),
@@ -704,11 +719,14 @@ export class WeightsService {
       updatedAt: Date;
     } | null = null;
     if (weight.photos) {
-      const signedUrls = await this.storageService.getSignedUrlsForPhoto({
-        thumbnailUrl: weight.photos.thumbnailUrl,
-        mediumUrl: weight.photos.mediumUrl,
-        fullUrl: weight.photos.fullUrl,
-      }, userId);
+      const signedUrls = await this.storageService.getSignedUrlsForPhoto(
+        {
+          thumbnailUrl: weight.photos.thumbnailUrl,
+          mediumUrl: weight.photos.mediumUrl,
+          fullUrl: weight.photos.fullUrl,
+        },
+        userId,
+      );
       photo = {
         id: weight.photos.id,
         userId: weight.photos.userId,
@@ -816,11 +834,14 @@ export class WeightsService {
         updatedAt: Date;
       } | null = null;
       if (updatedWeight.photos) {
-        const signedUrls = await this.storageService.getSignedUrlsForPhoto({
-          thumbnailUrl: updatedWeight.photos.thumbnailUrl,
-          mediumUrl: updatedWeight.photos.mediumUrl,
-          fullUrl: updatedWeight.photos.fullUrl,
-        }, userId);
+        const signedUrls = await this.storageService.getSignedUrlsForPhoto(
+          {
+            thumbnailUrl: updatedWeight.photos.thumbnailUrl,
+            mediumUrl: updatedWeight.photos.mediumUrl,
+            fullUrl: updatedWeight.photos.fullUrl,
+          },
+          userId,
+        );
         photo = {
           id: updatedWeight.photos.id,
           userId: updatedWeight.photos.userId,
@@ -856,11 +877,14 @@ export class WeightsService {
       );
     }
 
-    const signedUrls = await this.storageService.getSignedUrlsForPhoto({
-      thumbnailUrl: weight.photo.thumbnailUrl,
-      mediumUrl: weight.photo.mediumUrl,
-      fullUrl: weight.photo.fullUrl,
-    }, userId);
+    const signedUrls = await this.storageService.getSignedUrlsForPhoto(
+      {
+        thumbnailUrl: weight.photo.thumbnailUrl,
+        mediumUrl: weight.photo.mediumUrl,
+        fullUrl: weight.photo.fullUrl,
+      },
+      userId,
+    );
 
     return {
       id: weight.photo.id,

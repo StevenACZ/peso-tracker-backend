@@ -37,18 +37,25 @@ export class AuthService {
     return user;
   }
 
-  generateToken(payload: { userId: number }, options?: { expiresIn?: string; type?: 'access' | 'refresh' }): string {
+  generateToken(
+    payload: { userId: number },
+    options?: { expiresIn?: string; type?: 'access' | 'refresh' },
+  ): string {
     const defaultExpiry = options?.type === 'refresh' ? '7d' : '15m'; // Short access tokens for mobile security
-    return this.jwtService.sign(payload, { 
+    return this.jwtService.sign(payload, {
       expiresIn: options?.expiresIn || defaultExpiry,
-      algorithm: 'HS256' 
+      algorithm: 'HS256',
     });
   }
 
-  generateTokenPair(payload: { userId: number }): { accessToken: string; refreshToken: string; expiresIn: number } {
+  generateTokenPair(payload: { userId: number }): {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  } {
     const accessToken = this.generateToken(payload, { type: 'access' });
     const refreshToken = this.generateToken(payload, { type: 'refresh' });
-    
+
     return {
       accessToken,
       refreshToken,
@@ -153,7 +160,7 @@ export class AuthService {
     try {
       // Verify refresh token
       const payload = this.jwtService.verify(refreshToken);
-      
+
       if (!payload.userId) {
         throw new UnauthorizedException('Token de refresco inválido');
       }
@@ -173,12 +180,17 @@ export class AuthService {
 
       return {
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken, 
+        refreshToken: tokens.refreshToken,
         expiresIn: tokens.expiresIn,
       };
     } catch (error) {
-      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Token de refresco inválido o expirado');
+      if (
+        error.name === 'JsonWebTokenError' ||
+        error.name === 'TokenExpiredError'
+      ) {
+        throw new UnauthorizedException(
+          'Token de refresco inválido o expirado',
+        );
       }
       throw new UnauthorizedException('Error al refrescar el token');
     }
@@ -186,9 +198,11 @@ export class AuthService {
 
   async checkAvailability(checkDto: CheckAvailabilityDto) {
     const { username, email } = checkDto;
-    
+
     if (!username && !email) {
-      throw new BadRequestException('Debe proporcionar al menos username o email');
+      throw new BadRequestException(
+        'Debe proporcionar al menos username o email',
+      );
     }
 
     const conditions: Array<{ email?: string; username?: string }> = [];
@@ -202,11 +216,15 @@ export class AuthService {
 
     const result = {
       email: {
-        available: email ? !existingUser || existingUser.email !== email : undefined,
+        available: email
+          ? !existingUser || existingUser.email !== email
+          : undefined,
         checked: !!email,
       },
       username: {
-        available: username ? !existingUser || existingUser.username !== username : undefined,
+        available: username
+          ? !existingUser || existingUser.username !== username
+          : undefined,
         checked: !!username,
       },
     };
@@ -311,20 +329,19 @@ export class AuthService {
 
     // Generate JWT token valid for 5 minutes for password reset
     const resetToken = this.jwtService.sign(
-      { 
-        userId: user.id, 
+      {
+        userId: user.id,
         purpose: 'password-reset',
-        codeId: resetTokenRecord.id 
+        codeId: resetTokenRecord.id,
       },
-      { expiresIn: '5m' }
+      { expiresIn: '5m' },
     );
-    
+
     return {
       valid: true,
       resetToken, // JWT token to use in reset-password endpoint
     };
   }
-
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
@@ -332,9 +349,13 @@ export class AuthService {
     try {
       // Verify JWT token
       const payload = this.jwtService.verify(token);
-      
+
       // Validate token purpose and structure
-      if (payload.purpose !== 'password-reset' || !payload.userId || !payload.codeId) {
+      if (
+        payload.purpose !== 'password-reset' ||
+        !payload.userId ||
+        !payload.codeId
+      ) {
         throw new BadRequestException('Token de restablecimiento inválido');
       }
 
@@ -349,7 +370,9 @@ export class AuthService {
       });
 
       if (!resetTokenRecord) {
-        throw new BadRequestException('Token de restablecimiento inválido o expirado');
+        throw new BadRequestException(
+          'Token de restablecimiento inválido o expirado',
+        );
       }
 
       // Hash new password
@@ -372,8 +395,13 @@ export class AuthService {
         message: 'Contraseña restablecida exitosamente.',
       };
     } catch (error) {
-      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-        throw new BadRequestException('Token de restablecimiento inválido o expirado');
+      if (
+        error.name === 'JsonWebTokenError' ||
+        error.name === 'TokenExpiredError'
+      ) {
+        throw new BadRequestException(
+          'Token de restablecimiento inválido o expirado',
+        );
       }
       throw new BadRequestException('Error al restablecer la contraseña');
     }

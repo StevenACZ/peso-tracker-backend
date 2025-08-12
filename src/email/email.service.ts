@@ -17,13 +17,16 @@ export class EmailService {
     if (!apiKey) {
       throw new Error('RESEND_API_KEY is required');
     }
-    
-    this.resend = new Resend(apiKey);
-    this.fromEmail = this.configService.get<string>('email.fromEmail') || 'onboarding@resend.dev';
-    this.fromName = this.configService.get<string>('email.fromName') || 'Peso Tracker';
-    this.frontendUrl = this.configService.get<string>('cors.origin') || 'http://localhost:3000';
-  }
 
+    this.resend = new Resend(apiKey);
+    this.fromEmail =
+      this.configService.get<string>('email.fromEmail') ||
+      'onboarding@resend.dev';
+    this.fromName =
+      this.configService.get<string>('email.fromName') || 'Peso Tracker';
+    this.frontendUrl =
+      this.configService.get<string>('cors.origin') || 'http://localhost:3000';
+  }
 
   async sendPasswordResetCode(
     email: string,
@@ -32,7 +35,11 @@ export class EmailService {
   ): Promise<void> {
     try {
       // Load HTML template for code
-      const templatePath = join(__dirname, 'templates', 'reset-password-code.html');
+      const templatePath = join(
+        __dirname,
+        'templates',
+        'reset-password-code.html',
+      );
       let htmlTemplate = readFileSync(templatePath, 'utf-8');
 
       // Replace placeholders
@@ -65,8 +72,10 @@ export class EmailService {
     }
   }
 
-
-  private generatePlainTextCodeVersion(username: string, resetCode: string): string {
+  private generatePlainTextCodeVersion(
+    username: string,
+    resetCode: string,
+  ): string {
     return `
 ¡Hola ${username}!
 

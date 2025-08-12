@@ -1,11 +1,17 @@
-import { IsEmail, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CheckAvailabilityDto {
-  @ApiProperty({ 
-    example: 'testuser', 
+  @ApiProperty({
+    example: 'testuser',
     description: 'Nombre de usuario a verificar',
-    required: false 
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -16,7 +22,7 @@ export class CheckAvailabilityDto {
   @ApiProperty({
     example: 'test@example.com',
     description: 'Correo electrónico a verificar',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsEmail()

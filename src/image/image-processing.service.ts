@@ -19,17 +19,17 @@ export interface ImageSizes {
 export class ImageProcessingService {
   private readonly logger = new Logger(ImageProcessingService.name);
   private readonly isProduction: boolean;
-  
+
   // Optimized for Apple devices (Retina displays)
   private readonly imageSizes: ImageSizes = {
     thumbnail: { width: 300, height: 300 }, // @2x for 150px display
-    medium: { width: 800, height: 800 },    // @2x for 400px display  
-    full: { width: 1600, height: 1600 },    // @2x for 800px display
+    medium: { width: 800, height: 800 }, // @2x for 400px display
+    full: { width: 1600, height: 1600 }, // @2x for 800px display
   };
 
   private readonly allowedMimeTypes = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
     'image/webp',
     'image/heic',
@@ -50,15 +50,25 @@ export class ImageProcessingService {
     try {
       // Determine optimal format for processing
       const targetFormat = this.determineOptimalFormat(file.mimetype);
-      
+
       // Process all sizes in parallel for performance
       const [thumbnailBuffer, mediumBuffer, fullBuffer] = await Promise.all([
-        this.resizeAndOptimize(file.buffer, this.imageSizes.thumbnail, targetFormat),
-        this.resizeAndOptimize(file.buffer, this.imageSizes.medium, targetFormat),
+        this.resizeAndOptimize(
+          file.buffer,
+          this.imageSizes.thumbnail,
+          targetFormat,
+        ),
+        this.resizeAndOptimize(
+          file.buffer,
+          this.imageSizes.medium,
+          targetFormat,
+        ),
         this.resizeAndOptimize(file.buffer, this.imageSizes.full, targetFormat),
       ]);
 
-      this.logger.log(`Processed image: ${targetFormat} format, original size: ${file.size}, processed sizes: ${thumbnailBuffer.length}/${mediumBuffer.length}/${fullBuffer.length}`);
+      this.logger.log(
+        `Processed image: ${targetFormat} format, original size: ${file.size}, processed sizes: ${thumbnailBuffer.length}/${mediumBuffer.length}/${fullBuffer.length}`,
+      );
 
       return {
         thumbnailBuffer,
@@ -74,7 +84,10 @@ export class ImageProcessingService {
     }
   }
 
-  private validateImageFile(file: Express.Multer.File, maxFileSize: number): void {
+  private validateImageFile(
+    file: Express.Multer.File,
+    maxFileSize: number,
+  ): void {
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
         `Tipo de archivo no permitido. Solo se aceptan: ${this.allowedMimeTypes.join(', ')}`,
@@ -88,17 +101,19 @@ export class ImageProcessingService {
     }
   }
 
-  private determineOptimalFormat(originalMimeType: string): 'heif' | 'webp' | 'jpeg' {
+  private determineOptimalFormat(
+    originalMimeType: string,
+  ): 'heif' | 'webp' | 'jpeg' {
     // HEIF for production (Apple ecosystem native)
     if (this.isProduction && this.supportsHeif()) {
       return 'heif';
     }
-    
+
     // WebP for modern browsers in development
     if (!this.isProduction) {
       return 'webp';
     }
-    
+
     // JPEG fallback for maximum compatibility
     return 'jpeg';
   }
@@ -110,9 +125,12 @@ export class ImageProcessingService {
   ): Promise<Buffer> {
     // Use different resize strategies for different sizes
     const resizeOptions = this.getResizeStrategy(size.width);
-    
-    const sharpInstance = sharp(buffer)
-      .resize(size.width, size.height, resizeOptions);
+
+    const sharpInstance = sharp(buffer).resize(
+      size.width,
+      size.height,
+      resizeOptions,
+    );
 
     switch (format) {
       case 'heif':
@@ -122,7 +140,7 @@ export class ImageProcessingService {
             compression: 'av1', // Best compression for Apple
           })
           .toBuffer();
-          
+
       case 'webp':
         return sharpInstance
           .webp({
@@ -130,7 +148,7 @@ export class ImageProcessingService {
             effort: 4, // Balance quality/speed
           })
           .toBuffer();
-          
+
       case 'jpeg':
       default:
         return sharpInstance
@@ -143,7 +161,10 @@ export class ImageProcessingService {
     }
   }
 
-  private getResizeStrategy(width: number): { fit: 'cover' | 'inside'; position?: string } {
+  private getResizeStrategy(width: number): {
+    fit: 'cover' | 'inside';
+    position?: string;
+  } {
     // Thumbnail: Keep square for consistent UI grid
     if (width <= 300) {
       return {
@@ -151,7 +172,7 @@ export class ImageProcessingService {
         position: 'center',
       };
     }
-    
+
     // Medium & Full: Preserve original proportions for progress photos
     return {
       fit: 'inside', // Preserves aspect ratio, fits within dimensions
@@ -187,7 +208,7 @@ export class ImageProcessingService {
   getMimeType(format: 'heif' | 'webp' | 'jpeg'): string {
     const mimeTypes = {
       heif: 'image/heic',
-      webp: 'image/webp', 
+      webp: 'image/webp',
       jpeg: 'image/jpeg',
     };
     return mimeTypes[format];
@@ -197,9 +218,9 @@ export class ImageProcessingService {
   getCacheHeaders(format: 'heif' | 'webp' | 'jpeg'): Record<string, string> {
     const oneYear = 31536000; // 1 year in seconds
     const oneMonth = 2592000; // 1 month in seconds
-    
+
     return {
-      'Cache-Control': this.isProduction 
+      'Cache-Control': this.isProduction
         ? `public, max-age=${oneYear}, immutable`
         : `public, max-age=${oneMonth}`,
       'Content-Type': this.getMimeType(format),

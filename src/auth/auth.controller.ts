@@ -100,7 +100,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verificar disponibilidad de username y email',
-    description: 'Verifica si un username y/o email están disponibles para registro.',
+    description:
+      'Verifica si un username y/o email están disponibles para registro.',
   })
   @ApiBody({
     type: CheckAvailabilityDto,
@@ -142,7 +143,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Debe proporcionar al menos username o email.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Debe proporcionar al menos username o email.',
+  })
   async checkAvailability(@Body() checkDto: CheckAvailabilityDto) {
     return this.authService.checkAvailability(checkDto);
   }
@@ -182,13 +186,15 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Restablecer contraseña',
-    description: 'Cambia la contraseña usando un token JWT obtenido de verify-reset-code (válido por 5 minutos).',
+    description:
+      'Cambia la contraseña usando un token JWT obtenido de verify-reset-code (válido por 5 minutos).',
   })
   @ApiBody({
     type: ResetPasswordDto,
     examples: {
       'Reset con JWT token': {
-        summary: 'Restablecer contraseña con token JWT obtenido de verify-reset-code',
+        summary:
+          'Restablecer contraseña con token JWT obtenido de verify-reset-code',
         value: {
           token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
           newPassword: 'newSecurePassword123',
@@ -205,7 +211,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Token JWT inválido, expirado o datos incorrectos.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Token JWT inválido, expirado o datos incorrectos.',
+  })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
@@ -214,7 +223,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verificar código de restablecimiento',
-    description: 'Verifica si un código de 6 dígitos es válido para restablecer contraseña.',
+    description:
+      'Verifica si un código de 6 dígitos es válido para restablecer contraseña.',
   })
   @ApiBody({
     type: VerifyResetCodeDto,
@@ -242,5 +252,4 @@ export class AuthController {
   async verifyResetCode(@Body() verifyCodeDto: VerifyResetCodeDto) {
     return this.authService.verifyResetCode(verifyCodeDto);
   }
-
 }
