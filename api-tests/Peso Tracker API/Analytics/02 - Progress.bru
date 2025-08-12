@@ -1,0 +1,23 @@
+meta {
+  name: 02 - Progress
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/weights/progress
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Progress data retrieved successfully", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.currentWeight).to.exist;
+    expect(res.body.recordCount).to.be.a('number');
+  });
+}

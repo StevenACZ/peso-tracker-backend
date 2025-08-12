@@ -9,25 +9,21 @@ export default () => {
 
     database: {
       url: process.env.DATABASE_URL,
-      directUrl: process.env.DIRECT_URL,
     },
 
     jwt: {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+      expiresIn: '24h',
     },
 
     bcrypt: {
-      saltRounds: parseInt(
-        process.env.BCRYPT_SALT_ROUNDS || (isProduction ? '12' : '10'),
-        10,
-      ),
+      saltRounds: isProduction ? 12 : 10,
     },
 
     storage: {
-      uploadsPath: process.env.UPLOADS_PATH || '/app/uploads',
+      uploadsPath: '/app/uploads',
       baseUrl: process.env.BASE_URL || 'http://localhost:3000',
-      maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default
+      maxFileSize: 10485760, // 10MB for image uploads
     },
 
     cors: {
@@ -39,25 +35,10 @@ export default () => {
       credentials: true,
     },
 
-    rateLimit: {
-      ttl: parseInt(
-        process.env.RATE_LIMIT_TTL || (isProduction ? '60' : '300'),
-        10,
-      ),
-      limit: parseInt(
-        process.env.RATE_LIMIT_LIMIT || (isProduction ? '100' : '1000'),
-        10,
-      ),
-    },
-
-    logging: {
-      level: isProduction ? 'error' : 'debug',
-    },
-
     email: {
       resendApiKey: process.env.RESEND_API_KEY,
       fromEmail: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-      fromName: process.env.FROM_NAME || 'Peso Tracker',
+      fromName: 'Peso Tracker',
     },
   };
 };

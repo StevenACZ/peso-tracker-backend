@@ -1,0 +1,39 @@
+meta {
+  name: 01 - Create Weight
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/weights
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "weight": 72.5,
+    "date": "2025-01-12",
+    "notes": "Test weight from Bruno"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.id) {
+    bru.setEnvVar("lastWeightId", res.body.id.toString());
+    console.log("✅ Weight created, ID saved:", res.body.id);
+  }
+}
+
+tests {
+  test("Weight created successfully", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.id).to.be.a('number');
+    expect(res.body.weight).to.equal("72.5");
+    expect(res.body.userId).to.be.a('number');
+  });
+}

@@ -1,0 +1,24 @@
+meta {
+  name: 01 - Chart Data
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/weights/chart-data?period=3M&page=1&limit=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Chart data retrieved successfully", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.data).to.be.an('array');
+    expect(res.body.summary).to.be.an('object');
+    expect(res.body.pagination).to.be.an('object');
+  });
+}
