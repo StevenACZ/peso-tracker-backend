@@ -94,10 +94,10 @@ export class StorageService {
         fs.writeFile(fullPath, processedResult.fullBuffer, { mode: 0o600 }),
       ]);
 
-      // Generate public URLs (will be converted to signed URLs later)
-      const thumbnailUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_thumbnail.${fileExtension}`;
-      const mediumUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_medium.${fileExtension}`;
-      const fullUrl = `${this.baseUrl}/uploads/${userId}/${weightId}/${timestamp}_full.${fileExtension}`;
+      // Generate relative paths for secure URLs (without baseUrl to avoid nginx prefix issues)
+      const thumbnailUrl = `uploads/${userId}/${weightId}/${timestamp}_thumbnail.${fileExtension}`;
+      const mediumUrl = `uploads/${userId}/${weightId}/${timestamp}_medium.${fileExtension}`;
+      const fullUrl = `uploads/${userId}/${weightId}/${timestamp}_full.${fileExtension}`;
 
       // Prepare metadata for iOS/macOS apps
       const metadata = {
@@ -225,10 +225,13 @@ export class StorageService {
     const defaultExpiry = this.isProduction && !isCloudflare ? 900 : 1800; // 15min prod, 30min dev/cloudflare
     const expiry = expiresInSeconds || defaultExpiry;
 
-    const cleanPath = photoPath.replace(/^https?:\/\/[^/]+\//, '');
+    // Clean path from potential baseUrl prefixes and nginx routes
+    let cleanPath = photoPath.replace(/^https?:\/\/[^/]+\//, '');
+    // Remove nginx prefix if present
+    cleanPath = cleanPath.replace(/^peso-tracker\/v1\//, '');
 
     const payload = {
-      path: cleanPath,
+      path: cleanPath, // Should be clean "uploads/userId/weightId/filename.webp"
       userId: userId,
       exp: Math.floor(Date.now() / 1000) + expiry,
       // Add device context for Apple apps
@@ -242,6 +245,7 @@ export class StorageService {
     }
 
     const token = jwt.sign(payload, secret, { algorithm: 'HS256' });
+    // Return full URL with correct endpoint for photos
     return `${this.baseUrl}/photos/secure/${token}`;
   }
 

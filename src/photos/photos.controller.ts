@@ -113,7 +113,16 @@ export class PhotosController {
       await this.validatePhotoOwnership(photoPath, userId, req);
 
       // 6. Construir path completo del archivo con validación de seguridad
-      const relativePath = photoPath.replace(/^uploads\//, '');
+      // Clean path from nginx prefixes and normalize
+      let cleanPath = photoPath;
+      // Remove nginx route prefix if present (for backward compatibility)
+      cleanPath = cleanPath.replace(/^peso-tracker\/v1\//, '');
+      // Ensure path starts with uploads/
+      if (!cleanPath.startsWith('uploads/')) {
+        cleanPath = `uploads/${cleanPath}`;
+      }
+      // Extract relative path (everything after uploads/)
+      const relativePath = cleanPath.replace(/^uploads\//, '');
 
       // Security: prevent path traversal
       if (relativePath.includes('..') || relativePath.includes('/./')) {
@@ -121,6 +130,8 @@ export class PhotosController {
       }
 
       const fullPath = path.join(this.uploadsPath, relativePath);
+      
+      this.logger.log(`Photo access attempt: original=${photoPath}, clean=${cleanPath}, relative=${relativePath}, full=${fullPath}`);
 
       // 7. Verificar que el archivo existe y permisos
       try {
