@@ -26,7 +26,7 @@ export class StorageService {
     this.baseUrl =
       this.config.get<string>('storage.baseUrl') || 'http://localhost:3000';
     this.maxFileSize =
-      this.config.get<number>('storage.maxFileSize') || 10485760; // 10MB for HEIF
+      this.config.get<number>('storage.maxFileSize') || 10485760; // 10MB max file size
 
     // Ensure uploads directory exists
     void this.ensureUploadsDirectory();
@@ -45,7 +45,6 @@ export class StorageService {
     file: Express.Multer.File,
     userId: number,
     weightId: number,
-    cloudflareDetected: boolean = false,
   ): Promise<{
     thumbnailUrl: string;
     mediumUrl: string;
@@ -70,9 +69,7 @@ export class StorageService {
         file,
         this.maxFileSize,
       );
-      const fileExtension = this.imageProcessing.getFileExtension(
-        processedResult.format,
-      );
+      const fileExtension = this.imageProcessing.getFileExtension();
 
       // Generate file paths
       const thumbnailPath = path.join(
@@ -228,7 +225,7 @@ export class StorageService {
     const defaultExpiry = this.isProduction && !isCloudflare ? 900 : 1800; // 15min prod, 30min dev/cloudflare
     const expiry = expiresInSeconds || defaultExpiry;
 
-    const cleanPath = photoPath.replace(/^https?:\/\/[^\/]+\//, '');
+    const cleanPath = photoPath.replace(/^https?:\/\/[^/]+\//, '');
 
     const payload = {
       path: cleanPath,
@@ -271,12 +268,8 @@ export class StorageService {
     );
     const expiresIn = this.isProduction && !isCloudflare ? 900 : 1800; // 15min prod, 30min dev/cloudflare
 
-    // Extract format from URL for Apple apps optimization
-    const format = photo.fullUrl.includes('.heic')
-      ? 'heic'
-      : photo.fullUrl.includes('.webp')
-        ? 'webp'
-        : 'jpeg';
+    // Extract format from URL - always WebP now
+    const format = 'webp';
 
     return {
       thumbnailUrl: this.generateSecurePhotoUrl(
@@ -302,7 +295,7 @@ export class StorageService {
     };
   }
 
-  // New method for Apple-optimized cache headers
+  // Optimized cache headers for WebP images
   getAppleOptimizedHeaders(
     format: string,
     isCloudflare: boolean = false,
@@ -318,23 +311,17 @@ export class StorageService {
       'Content-Type': this.getMimeTypeFromFormat(format),
       'X-Content-Type-Options': 'nosniff',
       'Accept-Ranges': 'bytes',
-      'X-Apple-Optimized': 'true',
       Vary: 'Accept-Encoding',
-      // Apple-specific performance hints
-      'X-iOS-Cache-Friendly': 'true',
-      'X-Retina-Optimized': 'true',
     };
   }
 
   private getMimeTypeFromFormat(format: string): string {
     const mimeTypes: Record<string, string> = {
-      heic: 'image/heic',
-      heif: 'image/heif',
       webp: 'image/webp',
       jpeg: 'image/jpeg',
       jpg: 'image/jpeg',
     };
-    return mimeTypes[format] || 'image/jpeg';
+    return mimeTypes[format] || 'image/webp';
   }
 
   private getFileExtension(mimeType: string): string {

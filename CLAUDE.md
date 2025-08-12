@@ -2,9 +2,9 @@
 
 ## 🎯 **STACK ACTUAL (2025)**
 - **NestJS + Prisma + PostgreSQL** (VPS local)
-- **ImageProcessingService** → HEIF/WebP optimization for Apple apps
+- **ImageProcessingService** → WebP universal format optimization
 - **JWT-Secured Images** → 15min tokens, auto Cloudflare detection
-- **Apple-Optimized** → Headers, formats, mobile-first pagination
+- **Universal Format** → WebP images, mobile-first pagination
 
 ## ⚡ **COMANDOS ESENCIALES**
 ```bash
@@ -13,8 +13,8 @@ npm run prod:start    # VPS deployment
 npm run lint          # Code quality
 ```
 
-## 🍎 **APPLE OPTIMIZATIONS (NUEVAS)**
-- **HEIF/WebP images** → 70% smaller files
+## 📱 **IMAGE OPTIMIZATIONS**
+- **WebP universal format** → 70% smaller files, cross-platform
 - **JWT tokens 15min** + 7-day refresh (vs 1h anterior)  
 - **Mobile pagination** → Max 5 items (protege diseño app)
 - **Photo proportions** → Real aspect ratios (no crop en medium/full)
@@ -52,9 +52,9 @@ model Photo {
   id           Int    @id @default(autoincrement())
   userId       Int
   weightId     Int    @unique
-  thumbnailUrl String // 300x300 (cuadrado)
-  mediumUrl    String // 800px max (proporción real)  
-  fullUrl      String // 1600px max (proporción real)
+  thumbnailUrl String // 300x300 WebP (cuadrado)
+  mediumUrl    String // 800px max WebP (proporción real)  
+  fullUrl      String // 1600px max WebP (proporción real)
 }
 ```
 

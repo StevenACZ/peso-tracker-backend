@@ -6,7 +6,7 @@ export interface ProcessedImageResult {
   thumbnailBuffer: Buffer;
   mediumBuffer: Buffer;
   fullBuffer: Buffer;
-  format: 'heif' | 'webp' | 'jpeg';
+  format: 'webp';
 }
 
 export interface ImageSizes {
@@ -20,11 +20,11 @@ export class ImageProcessingService {
   private readonly logger = new Logger(ImageProcessingService.name);
   private readonly isProduction: boolean;
 
-  // Optimized for Apple devices (Retina displays)
+  // Optimized for high-DPI displays
   private readonly imageSizes: ImageSizes = {
-    thumbnail: { width: 300, height: 300 }, // @2x for 150px display
-    medium: { width: 800, height: 800 }, // @2x for 400px display
-    full: { width: 1600, height: 1600 }, // @2x for 800px display
+    thumbnail: { width: 300, height: 300 }, // High resolution for thumbnails
+    medium: { width: 800, height: 800 }, // High resolution for medium view
+    full: { width: 1600, height: 1600 }, // High resolution for full view
   };
 
   private readonly allowedMimeTypes = [
@@ -32,8 +32,6 @@ export class ImageProcessingService {
     'image/jpg',
     'image/png',
     'image/webp',
-    'image/heic',
-    'image/heif',
   ];
 
   constructor(private config: ConfigService) {
@@ -42,28 +40,26 @@ export class ImageProcessingService {
 
   async processImage(
     file: Express.Multer.File,
-    maxFileSize: number = 10485760, // 10MB for HEIF files
+    maxFileSize: number = 10485760, // 10MB max file size
   ): Promise<ProcessedImageResult> {
     // Validate file
     this.validateImageFile(file, maxFileSize);
 
     try {
-      // Determine optimal format for processing
-      const targetFormat = this.determineOptimalFormat(file.mimetype);
+      // Always use WebP for universal compatibility and efficiency
+      const targetFormat = 'webp';
 
       // Process all sizes in parallel for performance
       const [thumbnailBuffer, mediumBuffer, fullBuffer] = await Promise.all([
         this.resizeAndOptimize(
           file.buffer,
           this.imageSizes.thumbnail,
-          targetFormat,
         ),
         this.resizeAndOptimize(
           file.buffer,
           this.imageSizes.medium,
-          targetFormat,
         ),
-        this.resizeAndOptimize(file.buffer, this.imageSizes.full, targetFormat),
+        this.resizeAndOptimize(file.buffer, this.imageSizes.full),
       ]);
 
       this.logger.log(
@@ -101,27 +97,9 @@ export class ImageProcessingService {
     }
   }
 
-  private determineOptimalFormat(
-    originalMimeType: string,
-  ): 'heif' | 'webp' | 'jpeg' {
-    // HEIF for production (Apple ecosystem native)
-    if (this.isProduction && this.supportsHeif()) {
-      return 'heif';
-    }
-
-    // WebP for modern browsers in development
-    if (!this.isProduction) {
-      return 'webp';
-    }
-
-    // JPEG fallback for maximum compatibility
-    return 'jpeg';
-  }
-
   private async resizeAndOptimize(
     buffer: Buffer,
     size: { width: number; height: number },
-    format: 'heif' | 'webp' | 'jpeg',
   ): Promise<Buffer> {
     // Use different resize strategies for different sizes
     const resizeOptions = this.getResizeStrategy(size.width);
@@ -132,33 +110,12 @@ export class ImageProcessingService {
       resizeOptions,
     );
 
-    switch (format) {
-      case 'heif':
-        return sharpInstance
-          .heif({
-            quality: this.getQualityForSize(size.width),
-            compression: 'av1', // Best compression for Apple
-          })
-          .toBuffer();
-
-      case 'webp':
-        return sharpInstance
-          .webp({
-            quality: this.getQualityForSize(size.width),
-            effort: 4, // Balance quality/speed
-          })
-          .toBuffer();
-
-      case 'jpeg':
-      default:
-        return sharpInstance
-          .jpeg({
-            quality: this.getQualityForSize(size.width),
-            progressive: true, // Better for mobile
-            mozjpeg: true, // Better compression
-          })
-          .toBuffer();
-    }
+    return sharpInstance
+      .webp({
+        quality: this.getQualityForSize(size.width),
+        effort: 4, // Balance quality/speed
+      })
+      .toBuffer();
   }
 
   private getResizeStrategy(width: number): {
@@ -186,36 +143,16 @@ export class ImageProcessingService {
     return 75; // Full size
   }
 
-  private supportsHeif(): boolean {
-    try {
-      // Check if Sharp supports HEIF (requires libheif)
-      return sharp.format.heif.input.buffer;
-    } catch {
-      this.logger.warn('HEIF support not available, falling back to WebP/JPEG');
-      return false;
-    }
+  getFileExtension(): string {
+    return 'webp';
   }
 
-  getFileExtension(format: 'heif' | 'webp' | 'jpeg'): string {
-    const extensions = {
-      heif: 'heic', // Apple convention
-      webp: 'webp',
-      jpeg: 'jpg',
-    };
-    return extensions[format];
-  }
-
-  getMimeType(format: 'heif' | 'webp' | 'jpeg'): string {
-    const mimeTypes = {
-      heif: 'image/heic',
-      webp: 'image/webp',
-      jpeg: 'image/jpeg',
-    };
-    return mimeTypes[format];
+  getMimeType(): string {
+    return 'image/webp';
   }
 
   // Utility for getting optimized cache headers
-  getCacheHeaders(format: 'heif' | 'webp' | 'jpeg'): Record<string, string> {
+  getCacheHeaders(): Record<string, string> {
     const oneYear = 31536000; // 1 year in seconds
     const oneMonth = 2592000; // 1 month in seconds
 
@@ -223,11 +160,9 @@ export class ImageProcessingService {
       'Cache-Control': this.isProduction
         ? `public, max-age=${oneYear}, immutable`
         : `public, max-age=${oneMonth}`,
-      'Content-Type': this.getMimeType(format),
+      'Content-Type': this.getMimeType(),
       'X-Content-Type-Options': 'nosniff',
-      // Apple-specific optimization headers
       'Accept-Ranges': 'bytes',
-      'X-Apple-Optimized': 'true',
     };
   }
 }

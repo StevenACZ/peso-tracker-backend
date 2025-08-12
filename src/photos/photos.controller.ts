@@ -246,8 +246,6 @@ export class PhotosController {
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
       '.webp': 'image/webp',
-      '.heic': 'image/heic',
-      '.heif': 'image/heif',
       '.gif': 'image/gif',
     };
 
@@ -256,15 +254,13 @@ export class PhotosController {
 
   private getFormatFromExtension(extension: string): string {
     const formatMap: Record<string, string> = {
-      '.jpg': 'jpeg',
-      '.jpeg': 'jpeg',
-      '.png': 'jpeg', // Convert PNG to JPEG for consistency
+      '.jpg': 'webp',
+      '.jpeg': 'webp',
+      '.png': 'webp',
       '.webp': 'webp',
-      '.heic': 'heic',
-      '.heif': 'heic',
     };
 
-    return formatMap[extension] || 'jpeg';
+    return formatMap[extension] || 'webp';
   }
 
   private detectAppleClient(userAgent: string = ''): boolean {
