@@ -55,8 +55,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Memory optimization for VPS deployment (adjustable based on available RAM)
-ENV NODE_OPTIONS="--max-old-space-size=512"
+# Memory optimization for VPS deployment - increased for high-res image processing
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 # Environment variable to trigger database reset on first deploy
 ENV RESET_DATABASE=false

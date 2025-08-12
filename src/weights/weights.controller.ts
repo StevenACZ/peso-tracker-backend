@@ -41,7 +41,20 @@ export class WeightsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(FileInterceptor('photo', {
+    limits: {
+      fileSize: 10485760, // 10MB
+      files: 1,
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'), false);
+      }
+    },
+  }))
   @ApiOperation({
     summary: 'Crear un nuevo registro de peso con foto opcional',
   })
@@ -273,7 +286,20 @@ export class WeightsController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(FileInterceptor('photo', {
+    limits: {
+      fileSize: 10485760, // 10MB
+      files: 1,
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'), false);
+      }
+    },
+  }))
   @ApiOperation({ summary: 'Actualizar un registro de peso con foto opcional' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
