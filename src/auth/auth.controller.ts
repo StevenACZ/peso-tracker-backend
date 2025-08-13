@@ -6,6 +6,7 @@ import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiBody, ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
@@ -251,5 +252,42 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Código inválido o expirado.' })
   async verifyResetCode(@Body() verifyCodeDto: VerifyResetCodeDto) {
     return this.authService.verifyResetCode(verifyCodeDto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refrescar tokens de acceso',
+    description:
+      'Genera un nuevo access token y refresh token usando un refresh token válido.',
+  })
+  @ApiBody({
+    type: RefreshTokenDto,
+    examples: {
+      'Token refresh': {
+        summary: 'Refrescar tokens con refresh token válido',
+        value: {
+          refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens refrescados exitosamente.',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        expiresIn: 900,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido, expirado o usuario no encontrado.',
+  })
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 }
