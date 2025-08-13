@@ -51,29 +51,27 @@ export class ImageProcessingService {
 
       // Pre-process large images to prevent memory issues
       const processedBuffer = await this.preProcessLargeImage(file.buffer);
-      
-      this.logger.log(`Processing image: original size ${file.size}, after pre-processing: ${processedBuffer.length}`);
+
+      this.logger.log(
+        `Processing image: original size ${file.size}, after pre-processing: ${processedBuffer.length}`,
+      );
 
       // Process all sizes in parallel for performance
       const [thumbnailBuffer, mediumBuffer, fullBuffer] = await Promise.all([
-        this.resizeAndOptimize(
-          processedBuffer,
-          this.imageSizes.thumbnail,
-        ),
-        this.resizeAndOptimize(
-          processedBuffer,
-          this.imageSizes.medium,
-        ),
+        this.resizeAndOptimize(processedBuffer, this.imageSizes.thumbnail),
+        this.resizeAndOptimize(processedBuffer, this.imageSizes.medium),
         this.resizeAndOptimize(processedBuffer, this.imageSizes.full),
       ]);
 
       this.logger.log(
         `Processed image: ${targetFormat} format, original size: ${file.size}, processed sizes: ${thumbnailBuffer.length}/${mediumBuffer.length}/${fullBuffer.length}`,
       );
-      
+
       // Log memory usage for debugging
       const memUsage = process.memoryUsage();
-      this.logger.log(`Memory usage after processing: RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB, Heap: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+      this.logger.log(
+        `Memory usage after processing: RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB, Heap: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+      );
 
       return {
         thumbnailBuffer,
@@ -88,15 +86,24 @@ export class ImageProcessingService {
         mimetype: file.mimetype,
         memoryUsage: process.memoryUsage(),
       });
-      
+
       // More specific error messages for debugging
-      if (error.message?.includes('Input buffer contains unsupported image format')) {
+      if (
+        error.message?.includes(
+          'Input buffer contains unsupported image format',
+        )
+      ) {
         throw new BadRequestException('Formato de imagen no soportado');
       }
-      if (error.message?.includes('Cannot allocate memory') || error.message?.includes('out of memory')) {
-        throw new BadRequestException('Imagen demasiado grande para procesar. Intente con una imagen más pequeña.');
+      if (
+        error.message?.includes('Cannot allocate memory') ||
+        error.message?.includes('out of memory')
+      ) {
+        throw new BadRequestException(
+          'Imagen demasiado grande para procesar. Intente con una imagen más pequeña.',
+        );
       }
-      
+
       throw new BadRequestException(
         'Error al procesar la imagen. Verifique que el archivo sea una imagen válida.',
       );
@@ -170,22 +177,26 @@ export class ImageProcessingService {
     try {
       const metadata = await sharp(buffer).metadata();
       const { width = 0, height = 0 } = metadata;
-      
+
       // Log image info for debugging
-      this.logger.log(`Image metadata: ${width}x${height}, format: ${metadata.format}, size: ${buffer.length}`);
-      
+      this.logger.log(
+        `Image metadata: ${width}x${height}, format: ${metadata.format}, size: ${buffer.length}`,
+      );
+
       // If image is very large (>3MP or >5MB), pre-resize to reduce memory footprint
       const megapixels = (width * height) / 1000000;
       const isLargeImage = megapixels > 3 || buffer.length > 5242880; // 5MB
-      
+
       if (isLargeImage) {
-        this.logger.log(`Pre-processing large image: ${megapixels.toFixed(1)}MP, ${Math.round(buffer.length / 1024 / 1024)}MB`);
-        
+        this.logger.log(
+          `Pre-processing large image: ${megapixels.toFixed(1)}MP, ${Math.round(buffer.length / 1024 / 1024)}MB`,
+        );
+
         // Calculate max dimensions to keep reasonable memory usage
         const maxDimension = 2048; // Max width or height for pre-processing
         let resizeWidth: number | undefined;
         let resizeHeight: number | undefined;
-        
+
         if (width > height) {
           if (width > maxDimension) {
             resizeWidth = maxDimension;
@@ -197,7 +208,7 @@ export class ImageProcessingService {
             resizeWidth = Math.round((width * maxDimension) / height);
           }
         }
-        
+
         const preprocessed = await sharp(buffer)
           .resize(resizeWidth, resizeHeight, {
             fit: 'inside',
@@ -205,19 +216,23 @@ export class ImageProcessingService {
           })
           .jpeg({ quality: 90 }) // High quality intermediate format
           .toBuffer();
-          
-        this.logger.log(`Pre-processing completed: ${Math.round(preprocessed.length / 1024 / 1024)}MB (${Math.round((1 - preprocessed.length / buffer.length) * 100)}% reduction)`);
+
+        this.logger.log(
+          `Pre-processing completed: ${Math.round(preprocessed.length / 1024 / 1024)}MB (${Math.round((1 - preprocessed.length / buffer.length) * 100)}% reduction)`,
+        );
         return preprocessed;
       }
-      
+
       // For smaller images, just strip metadata to reduce size
       return await sharp(buffer)
         .rotate() // Auto-rotate based on EXIF
         .withMetadata() // Keep minimal metadata
         .toBuffer();
-        
     } catch (error) {
-      this.logger.warn('Pre-processing failed, using original buffer:', error.message);
+      this.logger.warn(
+        'Pre-processing failed, using original buffer:',
+        error.message,
+      );
       return buffer; // Fallback to original
     }
   }

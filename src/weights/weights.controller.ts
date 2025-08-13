@@ -43,20 +43,30 @@ export class WeightsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('photo', {
-    limits: {
-      fileSize: 10485760, // 10MB
-      files: 1,
-    },
-    fileFilter: (req, file, cb) => {
-      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (allowedMimes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'), false);
-      }
-    },
-  }))
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      limits: {
+        fileSize: 10485760, // 10MB
+        files: 1,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @ApiOperation({
     summary: 'Crear un nuevo registro de peso con foto opcional',
   })
@@ -103,7 +113,12 @@ export class WeightsController {
     @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.weightsService.create(user.id, createWeightDto, file, req.headers as Record<string, string>);
+    return this.weightsService.create(
+      user.id,
+      createWeightDto,
+      file,
+      req.headers as Record<string, string>,
+    );
   }
 
   @Get('chart-data')
@@ -289,20 +304,30 @@ export class WeightsController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('photo', {
-    limits: {
-      fileSize: 10485760, // 10MB
-      files: 1,
-    },
-    fileFilter: (req, file, cb) => {
-      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (allowedMimes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'), false);
-      }
-    },
-  }))
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      limits: {
+        fileSize: 10485760, // 10MB
+        files: 1,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new Error('Tipo de archivo no permitido. Solo JPEG, PNG, WebP.'),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @ApiOperation({ summary: 'Actualizar un registro de peso con foto opcional' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -348,7 +373,13 @@ export class WeightsController {
     @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.weightsService.update(id, user.id, updateWeightDto, file, req.headers as Record<string, string>);
+    return this.weightsService.update(
+      id,
+      user.id,
+      updateWeightDto,
+      file,
+      req.headers as Record<string, string>,
+    );
   }
 
   @Delete(':id')

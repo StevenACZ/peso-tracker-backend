@@ -18,7 +18,10 @@ async function bootstrap() {
   // Increase timeout for image processing (especially large iPhone photos)
   app.use((req, res, next) => {
     // Set longer timeout for upload endpoints
-    if (req.path.includes('/weights') && req.method === 'POST' || req.method === 'PATCH') {
+    if (
+      (req.path.includes('/weights') && req.method === 'POST') ||
+      req.method === 'PATCH'
+    ) {
       req.setTimeout(120000); // 2 minutes for image processing
       res.setTimeout(120000);
     }

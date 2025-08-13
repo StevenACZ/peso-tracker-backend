@@ -130,8 +130,10 @@ export class PhotosController {
       }
 
       const fullPath = path.join(this.uploadsPath, relativePath);
-      
-      this.logger.log(`Photo access attempt: original=${photoPath}, clean=${cleanPath}, relative=${relativePath}, full=${fullPath}`);
+
+      this.logger.log(
+        `Photo access attempt: original=${photoPath}, clean=${cleanPath}, relative=${relativePath}, full=${fullPath}`,
+      );
 
       // 7. Verificar que el archivo existe y permisos
       try {
